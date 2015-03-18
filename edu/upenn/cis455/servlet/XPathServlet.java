@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Enumeration;
 
 import javax.servlet.http.*;
 
@@ -16,7 +17,18 @@ public class XPathServlet extends HttpServlet {
 
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
-		/* TODO: Implement user interface for XPath engine here */
+		
+		// Parse input values
+		String htmlXml	= request.getParameter("html/xml");
+		String xpath	= request.getParameter("xpath");
+		
+		System.out.println(htmlXml);
+		System.out.println(xpath);
+		
+		// Check input values
+		
+		// Eventually sent out display results
+		System.out.println(response);
 
 		
 	}
@@ -33,9 +45,8 @@ public class XPathServlet extends HttpServlet {
 			while ((content = fileInput.read()) != -1) {
 				response.getOutputStream().write(content);
 			}
-			fileInput.close(); // Closing the file stream
+			fileInput.close();		// Closing the file stream
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 	}
