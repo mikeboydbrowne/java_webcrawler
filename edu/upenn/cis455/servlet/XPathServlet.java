@@ -1,12 +1,14 @@
 package edu.upenn.cis455.servlet;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Enumeration;
+import java.io.*;
+import java.net.*;
 
 import javax.servlet.http.*;
+import javax.swing.text.Document;
+
+import org.jsoup.Jsoup;
+
+import edu.upenn.cis455.xpathengine.*;
 
 @SuppressWarnings("serial")
 public class XPathServlet extends HttpServlet {
@@ -19,13 +21,29 @@ public class XPathServlet extends HttpServlet {
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
 		
 		// Parse input values
-		String htmlXml	= request.getParameter("html/xml");
-		String xpath	= request.getParameter("xpath");
+		String 		htmlXml	= request.getParameter("html/xml");
+		String 		xpath	= request.getParameter("xpath");
+		String[] 	xpaths 	= xpath.split(";");
 		
-		System.out.println(htmlXml);
-		System.out.println(xpath);
+		// Get document
+		Document doc = null;
+		try {
+			doc = (Document) Jsoup.connect("http://en.wikipedia.org/").get();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
-		// Check input values
+		// Set up XPATH Engine
+		XPathEngine engine = XPathEngineFactory.getXPathEngine();
+		engine.setXPaths(xpaths);
+		
+		try {
+			doc = (Document) Jsoup.connect("http://en.wikipedia.org/").get();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+//		engine.setXPaths();		// Set XPATH Values
 		
 		// Eventually sent out display results
 		System.out.println(response);
@@ -50,7 +68,6 @@ public class XPathServlet extends HttpServlet {
 			e1.printStackTrace();
 		}
 	}
-
 }
 
 

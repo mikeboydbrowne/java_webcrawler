@@ -2,7 +2,7 @@ package edu.upenn.cis455.xpathengine;
 
 import org.w3c.dom.Document;
 
-interface XPathEngine {
+public interface XPathEngine {
 
   // Sets the XPath expression(s) that are to be evaluated. 
   void setXPaths(String[] expressions);
