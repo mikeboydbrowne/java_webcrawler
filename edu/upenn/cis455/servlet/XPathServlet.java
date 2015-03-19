@@ -5,8 +5,8 @@ import java.net.*;
 
 import javax.servlet.http.*;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
+import org.w3c.dom.Document;
+import org.w3c.tidy.Tidy;
 
 import edu.upenn.cis455.xpathengine.*;
 
@@ -20,23 +20,41 @@ public class XPathServlet extends HttpServlet {
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
 		
-		// Parse input values
-		String 		htmlXml	= standardizeReq(request.getParameter("html/xml"));
-		String 		xpath	= request.getParameter("xpath");
-		String[] 	xpaths 	= xpath.split(";");
+		// Parse inputs
+		String 		htmlXml		= standardizeReq(request.getParameter("html/xml"));
+		String 		xpath		= request.getParameter("xpath");
+		String[] 	xpaths 		= xpath.split(";");
+		boolean		isHTML 		= true;
 		
-		// Get document
+		// Checking if html or xml
+		isHTML = !htmlXml.endsWith(".xml");
+		
+		// Setting up JTidy
+		Tidy		domParse	= new Tidy();
+		domParse.setForceOutput(true);
+		domParse.setShowErrors(0);
+		domParse.setQuiet(true);
 		Document doc = null;
-		try {
-			doc = Jsoup.connect(htmlXml).get();
-		} catch (IOException e) {
-			e.printStackTrace();
+		
+		// Parsing if HTML
+		if (isHTML) {
+			try {
+				doc = domParse.parseDOM(new URL(htmlXml).openStream(), System.out);
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		// Parsing if XML
+		} else {
+			
 		}
 		
 		// Set up XPATH Engine
 		XPathEngine engine = XPathEngineFactory.getXPathEngine();
 		engine.setXPaths(xpaths);
-		engine.evaluate((org.w3c.dom.Document) doc);
+		engine.evaluate(doc);
 		
 		// Eventually sent out display results
 		System.out.println(response);
@@ -62,7 +80,7 @@ public class XPathServlet extends HttpServlet {
 		}
 	}
 	
-	public String standardizeReq(String req) {
+	private String standardizeReq(String req) {
 		if (req.startsWith("http://")) {
 			return req;
 		} else if (req.startsWith("www.")){
