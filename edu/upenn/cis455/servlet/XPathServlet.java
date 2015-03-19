@@ -4,9 +4,9 @@ import java.io.*;
 import java.net.*;
 
 import javax.servlet.http.*;
-import javax.swing.text.Document;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import edu.upenn.cis455.xpathengine.*;
 
@@ -21,14 +21,14 @@ public class XPathServlet extends HttpServlet {
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
 		
 		// Parse input values
-		String 		htmlXml	= request.getParameter("html/xml");
+		String 		htmlXml	= standardizeReq(request.getParameter("html/xml"));
 		String 		xpath	= request.getParameter("xpath");
 		String[] 	xpaths 	= xpath.split(";");
 		
 		// Get document
 		Document doc = null;
 		try {
-			doc = (Document) Jsoup.connect("http://en.wikipedia.org/").get();
+			doc = Jsoup.connect(htmlXml).get();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -36,14 +36,7 @@ public class XPathServlet extends HttpServlet {
 		// Set up XPATH Engine
 		XPathEngine engine = XPathEngineFactory.getXPathEngine();
 		engine.setXPaths(xpaths);
-		
-		try {
-			doc = (Document) Jsoup.connect("http://en.wikipedia.org/").get();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-//		engine.setXPaths();		// Set XPATH Values
+		engine.evaluate((org.w3c.dom.Document) doc);
 		
 		// Eventually sent out display results
 		System.out.println(response);
@@ -66,6 +59,18 @@ public class XPathServlet extends HttpServlet {
 			fileInput.close();		// Closing the file stream
 		} catch (IOException e1) {
 			e1.printStackTrace();
+		}
+	}
+	
+	public String standardizeReq(String req) {
+		if (req.startsWith("http://")) {
+			return req;
+		} else if (req.startsWith("www.")){
+			return "http://" + req;
+		} else if (req.startsWith("http://www.")) {
+			return req;
+		} else {
+			return "http://www." + req;
 		}
 	}
 }
