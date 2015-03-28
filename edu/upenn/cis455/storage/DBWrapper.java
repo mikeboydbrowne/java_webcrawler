@@ -1,144 +1,17 @@
 package edu.upenn.cis455.storage;
 
-import java.io.File;
-
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.persist.EntityStore;
-import com.sleepycat.persist.StoreConfig;
-
 public class DBWrapper {
 	
-	// store for data from webapp
-	private static String userDirectory = null;
-	private static Environment userEnv;
-	private static EntityStore userStore;
+	private DBEnvironment env;
+	private DataIndexer di;
 	
-	// store for data from crawler
-	private static String crawlerDirectory = null;
-	private static Environment crawlerEnv;
-	private static EntityStore crawlerStore;
+	public DBWrapper(String path) {
+		env = new DBEnvironment(path);
+		di = new DataIndexer(env.getCrawlerStore());
+	}
 	
-	public DBWrapper() {}
+	// Get user & user data + manipulate it
 	
-	/**
-	 * Initializes the BerkeleyDB instances for the crawlerDB and userDB
-	 */
-	public void setup() {
-		userDirectory = "data/userDB";
-		crawlerDirectory = "data/crawlerDB";
-		
-		try {
-			// initializing the environment's config
-			EnvironmentConfig envConfig = new EnvironmentConfig();
-			envConfig.setAllowCreate(true);	   // supports creation if doesn't already exist
-			envConfig.setTransactional(true);  // supports transactions
-			
-			// initializing the store's config
-			StoreConfig storeConfig = new StoreConfig();
-			storeConfig.setAllowCreate(true);
-			storeConfig.setTransactional(true);
-			
-			// creating DB and store instances
-			userEnv = new Environment(new File(userDirectory), envConfig);
-			userStore = new EntityStore(userEnv, "UserStore", storeConfig);
-			crawlerEnv = new Environment(new File(crawlerDirectory), envConfig);
-			userStore = new EntityStore(crawlerEnv, "CrawlerStore", storeConfig);
+	// Get crawler data + manipulate it
 
-		} catch (DatabaseException dbe) {
-			System.out.println(dbe.toString());
-			System.out.println(dbe.getStackTrace());
-			System.exit(-1);
-		}
-	}
-	
-	/**
-	 * Returns a handle to the userStore
-	 * @return EntityStore
-	 */
-	public EntityStore getUserStore() {
-		return userStore;
-	}
-	
-	/**
-	 * Returns a handle to the userEnv
-	 * @return Environment
-	 */
-	public Environment getUserEnv() {
-		return userEnv;
-	}
-	
-	/**
-	 * Returns a handle to the crawlerStore
-	 * @return EntityStore
-	 */
-	public EntityStore getCrawlerStore() {
-		return crawlerStore;
-	}
-	
-	/**
-	 * Returns a handle to the crawlerEnv
-	 * @return Environment
-	 */
-	public Environment getCrawlerEnv() {
-		return crawlerEnv;
-	}
-	
-	
-	
-	/**
-	 * Shuts down the BerkeleyDB instances for crawlers and users
-	 */
-	public void shutdownDBs() {
-		// shutting down userStore
-		if (userStore != null) {
-			try {
-				userStore.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing store: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-		
-		// shutting down userEnv
-		if (userEnv != null) {
-			try {
-				// Finally, close environment.
-				userEnv.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing userEnv: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-		
-		// shutting down crawlerStore
-		if (crawlerStore != null) {
-			try {
-				userStore.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing store: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-
-		// shutting down crawlerEnv
-		if (crawlerEnv != null) {
-			try {
-				// Finally, close environment.
-				userEnv.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing crawlerEnv: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-	}
-	
-	public void getUserData(String username) {
-		
-	}
-	
-	public void validatePassword(String password) {
-		
-	}
 }

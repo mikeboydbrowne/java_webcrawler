@@ -1,4 +1,4 @@
-package edu.upenn.cis455.xpathengine;
+package test.edu.upenn.cis455;
 
 import static org.junit.Assert.*;
 
