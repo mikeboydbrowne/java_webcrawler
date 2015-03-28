@@ -7,28 +7,14 @@ import javax.servlet.http.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.tidy.Tidy;
-import org.xml.sax.SAXException;
 
 import edu.upenn.cis455.xpathengine.*;
 
 @SuppressWarnings("serial")
 public class XPathServlet extends HttpServlet {
-	
-	/* TODO: Implement user interface for XPath engine here */
-	
-	/* You may want to override one or both of the following methods */
-
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
 		
@@ -91,25 +77,22 @@ public class XPathServlet extends HttpServlet {
 		}
 		
 		responseText = "<!DOCTYPE html>"
-		+ "<html lang=\"en\">\n"
-		+ "<head>\n"
-		+ "<title>Webcrawler Interface</title>\n"
-		+ "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-		+ "<!-- Latest compiled and minified CSS -->\n"
-		+ "<link rel=\"stylesheet\"\n"
-		+ "href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css\">\n"
-		+ "<!-- Latest compiled and minified JavaScript -->\n"
-		+ "<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>\n"
-		+ "</head>\n"
-		+ "<body>\n"
-		+ "<div class=\"container\">\n"
-		+ "<div class=\"row\">\n"
-		+ "<div class=\"col-md-4\"></div>\n"
-		+ "<div class=\"col-md-4\">\n";
-		
-		responseText += "<h1 style=\"text-align: center; margin-top: 50px; margin-bottom; 30px\">Webcrawler Results</h1>";
-		
-		
+			+ "<html lang=\"en\">\n"
+			+ "<head>\n"
+			+ "<title>Webcrawler Interface</title>\n"
+			+ "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+			+ "<!-- Latest compiled and minified CSS -->\n"
+			+ "<link rel=\"stylesheet\"\n"
+			+ "href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css\">\n"
+			+ "<!-- Latest compiled and minified JavaScript -->\n"
+			+ "<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>\n"
+			+ "</head>\n"
+			+ "<body>\n"
+			+ "<div class=\"container\">\n"
+			+ "<div class=\"row\">\n"
+			+ "<div class=\"col-md-4\"></div>\n"
+			+ "<div class=\"col-md-4\">\n"
+			+ "<h1 style=\"text-align: center; margin-top: 50px; margin-bottom; 30px\">Webcrawler Results</h1>";
 		
 		int i = 0;
 		for (boolean b : evaluatedPaths) {
@@ -118,30 +101,20 @@ public class XPathServlet extends HttpServlet {
 		}
 		
 		responseText += "<div class=\"control-group\" style=\"text-align: center; margin-top:20px; \">"
-						+ "<button class=\"btn btn-primary\">Back to Crawler Interface</button>"
-						+ "</div>";
-		
-		responseText += "</div>\n"
-		+ "<div class=\"col-md-4\"></div>\n"
-		+ "</div>\n"
-		+ "</div>\n"
-		+ "</body>\n"
-		+ "</html>";
-		
-		System.out.println(responseText);
+			+ "<button class=\"btn btn-primary\">Back to Crawler Interface</button>"
+			+ "</div>"
+			+ "</div>\n"
+			+ "<div class=\"col-md-4\"></div>\n"
+			+ "</div>\n"
+			+ "</div>\n"
+			+ "</body>\n"
+			+ "</html>";
 		
 		try {
 			responseOutput.write(responseText.getBytes());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-		
-		
-		// Eventually sent out display results
-		System.out.println(response);
-
-		
 	}
 
 	@Override
@@ -174,12 +147,3 @@ public class XPathServlet extends HttpServlet {
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
