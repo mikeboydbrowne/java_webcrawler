@@ -7,17 +7,16 @@ import org.w3c.dom.NodeList;
 
 public class XPathEngineImpl implements XPathEngine {
 	
-	String[] 	xpaths;
-	boolean[] 	evaluatedPaths 	= null;
-	Document	DOM				= null;
-	Node		root			= null;
-	boolean		rootSet			= false;
-	boolean		domSet			= false;
-	boolean		pathsEvaled 	= false;
-	boolean		xpathsSet		= false;
+	String[] xpaths;
+	boolean[] evaluatedPaths = null;
+	Document DOM = null;
+	Node root = null;
+	boolean rootSet	= false;
+	boolean	domSet	= false;
+	boolean	pathsEvaled = false;
+	boolean	xpathsSet = false;
 
 	public XPathEngineImpl() {
-		// Do NOT add arguments to the constructor!!
 	}
 
 	public void setXPaths(String[] s) {
@@ -30,7 +29,7 @@ public class XPathEngineImpl implements XPathEngine {
 		}
 		
 		// XPaths have been set
-		xpathsSet 	= true;
+		xpathsSet = true;
 	}
 
 	public boolean isValid(int i) {
@@ -47,11 +46,11 @@ public class XPathEngineImpl implements XPathEngine {
 	public boolean[] evaluate(Document d) {
 		
 		// Setting DOM
-		DOM 	= d;
-		domSet 	= true;
+		DOM = d;
+		domSet = true;
 		if (d.getParentNode() == null && !rootSet) {
 			rootSet = true;
-			root 	= d.getDocumentElement();
+			root = d.getDocumentElement();
 		}
 		
 		// Checking all XPath matches
@@ -61,8 +60,8 @@ public class XPathEngineImpl implements XPathEngine {
 		}
 		
 		// Updating class variables
-		pathsEvaled 	= true;
-		evaluatedPaths 	= retArr;
+		pathsEvaled = true;
+		evaluatedPaths = retArr;
 		
 		// Returning boolean array
 		return retArr;
@@ -72,12 +71,12 @@ public class XPathEngineImpl implements XPathEngine {
 	private boolean traverseDOM(String path, Node n) {
 		
 		// Splitting the path
-		String step 	= path.split("/")[1];
+		String step = path.split("/")[1];
 		String pathLeft = path.substring(step.length() + 1);
 		
 		// Examine node and it's siblings
-		Node testNode		= null;
-		NodeList children 	= n.getChildNodes();
+		Node testNode = null;
+		NodeList children = n.getChildNodes();
 		
 		// Checking if step is a test step or not
 		if (isTest(step)) {
@@ -217,8 +216,8 @@ public class XPathEngineImpl implements XPathEngine {
 		// Non-null check
 		if (s != null) {
 			String ret = "";
-			boolean betweenQuotes 	= false;
-			boolean escaped			= false;
+			boolean betweenQuotes = false;
+			boolean escaped	= false;
 			
 			// Adding all relevant characters
 			for (char c : s.toCharArray()) {
@@ -257,7 +256,7 @@ public class XPathEngineImpl implements XPathEngine {
 	
 	private boolean equals(String s1, String s2) {
 		boolean ret = false;
-		int 	i 	= 0;
+		int i = 0;
 		char[]	s2Arr = s2.toCharArray();
 		for (char c : s1.toCharArray()) {
 			if (c != s2Arr[i]) {

@@ -33,25 +33,25 @@ public class XPathServlet extends HttpServlet {
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
 		
 		// Parse inputs
-		String 		htmlXml		= standardizeReq(request.getParameter("html/xml"));
-		String 		xpath		= request.getParameter("xpath");
-		String[] 	xpaths 		= xpath.split(";");
-		boolean		isHTML 		= true;
+		String htmlXml = standardizeReq(request.getParameter("html/xml"));
+		String xpath = request.getParameter("xpath");
+		String[] xpaths = xpath.split(";");
+		boolean	isHTML = true;
 		
 		// Checking if html or xml
 		isHTML = !htmlXml.endsWith(".xml");
 		
 		// Setting up JTidy
-		Tidy		domParse	= new Tidy();
+		Tidy domParse = new Tidy();
 		domParse.setForceOutput(true);
 		domParse.setShowErrors(0);
 		domParse.setQuiet(true);
 		// HTML Parsing
-		Document 				docTemp = null;
-		Document 				doc	 	= null;
+		Document docTemp = null;
+		Document doc = null;
 		// XML Parsing
-		DocumentBuilderFactory 	builder = DocumentBuilderFactory.newInstance();
-		DocumentBuilder			dom		= null;
+		DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
+		DocumentBuilder	dom = null;
 		
 		// Parsing HTML
 		if (isHTML) {
@@ -147,7 +147,7 @@ public class XPathServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
 		
 		// Displaying the interface
-		File 			index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
+		File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
 		FileInputStream fileInput = new FileInputStream(index);
 		
 		int content;
