@@ -20,7 +20,12 @@ public class DBWrapper {
 	private static Environment crawlerEnv;
 	private static EntityStore crawlerStore;
 	
-	public DBWrapper() {
+	public DBWrapper() {}
+	
+	/**
+	 * Initializes the BerkeleyDB instances for the crawlerDB and userDB
+	 */
+	public void setup() {
 		userDirectory = "data/userDB";
 		crawlerDirectory = "data/crawlerDB";
 		
@@ -48,6 +53,43 @@ public class DBWrapper {
 		}
 	}
 	
+	/**
+	 * Returns a handle to the userStore
+	 * @return EntityStore
+	 */
+	public EntityStore getUserStore() {
+		return userStore;
+	}
+	
+	/**
+	 * Returns a handle to the userEnv
+	 * @return Environment
+	 */
+	public Environment getUserEnv() {
+		return userEnv;
+	}
+	
+	/**
+	 * Returns a handle to the crawlerStore
+	 * @return EntityStore
+	 */
+	public EntityStore getCrawlerStore() {
+		return crawlerStore;
+	}
+	
+	/**
+	 * Returns a handle to the crawlerEnv
+	 * @return Environment
+	 */
+	public Environment getCrawlerEnv() {
+		return crawlerEnv;
+	}
+	
+	
+	
+	/**
+	 * Shuts down the BerkeleyDB instances for crawlers and users
+	 */
 	public void shutdownDBs() {
 		// shutting down userStore
 		if (userStore != null) {
@@ -91,6 +133,12 @@ public class DBWrapper {
 			}
 		}
 	}
-	/* TODO: write object store wrapper for BerkeleyDB */
 	
+	public void getUserData(String username) {
+		
+	}
+	
+	public void validatePassword(String password) {
+		
+	}
 }

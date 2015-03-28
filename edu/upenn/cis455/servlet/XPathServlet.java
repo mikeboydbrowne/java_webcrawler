@@ -46,9 +46,10 @@ public class XPathServlet extends HttpServlet {
 		domParse.setForceOutput(true);
 		domParse.setShowErrors(0);
 		domParse.setQuiet(true);
+		
 		// HTML Parsing
 		Document docTemp = null;
-		Document doc = null;
+		
 		// XML Parsing
 		DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
 		DocumentBuilder	dom = null;
