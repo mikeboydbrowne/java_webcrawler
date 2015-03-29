@@ -10,6 +10,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.tidy.Tidy;
+import org.xml.sax.SAXException;
 
 import edu.upenn.cis455.storage.DBWrapper;
 import edu.upenn.cis455.xpathengine.*;
@@ -18,99 +19,91 @@ import edu.upenn.cis455.xpathengine.*;
 public class XPathServlet extends HttpServlet {
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
-		
 		// Parse inputs
 		String htmlXml = standardizeReq(request.getParameter("html/xml"));
 		String xpath = request.getParameter("xpath");
 		String[] xpaths = xpath.split(";");
-		boolean	isHTML = true;
-		
+		boolean isHTML = true;
 		// Checking if html or xml
 		isHTML = !htmlXml.endsWith(".xml");
-		
 		// Setting up JTidy
 		Tidy domParse = new Tidy();
 		domParse.setForceOutput(true);
 		domParse.setShowErrors(0);
 		domParse.setQuiet(true);
-		
 		// HTML Parsing
 		Document docTemp = null;
-		
 		// XML Parsing
 		DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
-		DocumentBuilder	dom = null;
-		
+		DocumentBuilder dom = null;
 		// Parsing HTML
 		if (isHTML) {
 			try {
-				docTemp = domParse.parseDOM(new URL(htmlXml).openStream(), null);
+				docTemp = domParse
+						.parseDOM(new URL(htmlXml).openStream(), null);
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		
-		// Parsing XML
+
+			// Parsing XML
 		} else {
 			try {
 				dom = builder.newDocumentBuilder();
+				docTemp = dom.parse(new URL(htmlXml).openStream());
 			} catch (ParserConfigurationException e) {
+				e.printStackTrace();
+			} catch (SAXException e) {
+				e.printStackTrace();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		
 		// Set up XPATH Engine
 		XPathEngine engine = XPathEngineFactory.getXPathEngine();
 		engine.setXPaths(xpaths);
-		
 		// Evaluating the document
 		boolean[] evaluatedPaths = engine.evaluate(docTemp);
-		
 		// Getting the print writer
 		OutputStream responseOutput = null;
 		String responseText = "";
-		
 		try {
 			responseOutput = response.getOutputStream();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 		responseText = "<!DOCTYPE html>"
-			+ "<html lang=\"en\">\n"
-			+ "<head>\n"
-			+ "<title>Webcrawler Interface</title>\n"
-			+ "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-			+ "<!-- Latest compiled and minified CSS -->\n"
-			+ "<link rel=\"stylesheet\"\n"
-			+ "href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css\">\n"
-			+ "<!-- Latest compiled and minified JavaScript -->\n"
-			+ "<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>\n"
-			+ "</head>\n"
-			+ "<body>\n"
-			+ "<div class=\"container\">\n"
-			+ "<div class=\"row\">\n"
-			+ "<div class=\"col-md-4\"></div>\n"
-			+ "<div class=\"col-md-4\">\n"
-			+ "<h1 style=\"text-align: center; margin-top: 50px; margin-bottom; 30px\">Webcrawler Results</h1>";
-		
+				+ "<html lang=\"en\">\n"
+				+ "<head>\n"
+				+ "<title>Webcrawler Interface</title>\n"
+				+ "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+				+ "<!-- Latest compiled and minified CSS -->\n"
+				+ "<link rel=\"stylesheet\"\n"
+				+ "href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css\">\n"
+				+ "<!-- Latest compiled and minified JavaScript -->\n"
+				+ "<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>\n"
+				+ "</head>\n"
+				+ "<body>\n"
+				+ "<div class=\"container\">\n"
+				+ "<div class=\"row\">\n"
+				+ "<div class=\"col-md-4\"></div>\n"
+				+ "<div class=\"col-md-4\">\n"
+				+ "<h1 style=\"text-align: center; margin-top: 50px; margin-bottom; 30px\">Webcrawler Results</h1>";
 		int i = 0;
 		for (boolean b : evaluatedPaths) {
-			responseText += "<h4>Xpath: " + xpaths[i] + " is:" + b + "</h4>\n<br>\n";
+			responseText += "<h4>Xpath: " + xpaths[i] + " is:" + b
+					+ "</h4>\n<br>\n";
 			i++;
 		}
-		
 		responseText += "<div class=\"control-group\" style=\"text-align: center; margin-top:20px; \">"
-			+ "<button class=\"btn btn-primary\">Back to Crawler Interface</button>"
-			+ "</div>"
-			+ "</div>\n"
-			+ "<div class=\"col-md-4\"></div>\n"
-			+ "</div>\n"
-			+ "</div>\n"
-			+ "</body>\n"
-			+ "</html>";
-		
+				+ "<button class=\"btn btn-primary\">Back to Crawler Interface</button>"
+				+ "</div>"
+				+ "</div>\n"
+				+ "<div class=\"col-md-4\"></div>\n"
+				+ "</div>\n" + "</div>\n" + "</body>\n" + "</html>";
 		try {
 			responseOutput.write(responseText.getBytes());
 		} catch (IOException e) {
@@ -119,27 +112,26 @@ public class XPathServlet extends HttpServlet {
 	}
 
 	@Override
-	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
-		
+	public void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws FileNotFoundException {
 		// Displaying the interface
 		File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
 		FileInputStream fileInput = new FileInputStream(index);
-		
 		int content;
 		try {
 			while ((content = fileInput.read()) != -1) {
 				response.getOutputStream().write(content);
 			}
-			fileInput.close();		// Closing the file stream
+			fileInput.close(); // Closing the file stream
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 	}
-	
+
 	private String standardizeReq(String req) {
 		if (req.startsWith("http://")) {
 			return req;
-		} else if (req.startsWith("www.")){
+		} else if (req.startsWith("www.")) {
 			return "http://" + req;
 		} else if (req.startsWith("http://www.")) {
 			return req;
