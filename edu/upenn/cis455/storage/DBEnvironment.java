@@ -1,6 +1,7 @@
 package edu.upenn.cis455.storage;
 
 import java.io.File;
+import java.io.IOException;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
@@ -28,7 +29,15 @@ public class DBEnvironment {
 	 * Initializes the BerkeleyDB instances for the crawlerDB and userDB
 	 */
 	public void setup(String path) {
-		crawlerDirectory = path;
+		File data = new File(path);
+		System.out.println(data.getAbsolutePath());
+		if (!data.isFile()) {
+			try {
+				data.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		try {
 			// initializing the environment's config
@@ -42,7 +51,7 @@ public class DBEnvironment {
 			storeConfig.setTransactional(true);
 			
 			// creating DB and store instances
-			crawlerEnv = new Environment(new File(crawlerDirectory), envConfig);
+			crawlerEnv = new Environment(data, envConfig);
 			crawlerStore = new EntityStore(crawlerEnv, "CrawlerStore", storeConfig);
 
 		} catch (DatabaseException dbe) {

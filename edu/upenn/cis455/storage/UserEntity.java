@@ -16,9 +16,13 @@ public class UserEntity {
 	private String userName;
 	
 	
-	public UserEntity(String userName, String password) {
+//	public UserEntity(String userName, String password) {
+//		this.userName = userName;
+//		this.password = password;
+//	}
+	
+	public void setUserName(String userName) {
 		this.userName = userName;
-		this.password = password;
 	}
 	
 	/**

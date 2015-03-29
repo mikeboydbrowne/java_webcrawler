@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import edu.upenn.cis455.xpathengine.XPathEngineImpl;;
-
 public class XPathEngineImplTest {
 
 	@Test
