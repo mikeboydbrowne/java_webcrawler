@@ -2,8 +2,6 @@ package test.edu.upenn.cis455;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
-
 import org.junit.Test;
 
 import edu.upenn.cis455.storage.DBWrapper;
@@ -14,8 +12,17 @@ public class DBWrapperTest {
 	DBWrapper dbInstance = new DBWrapper(".");
 	
 	@Test
-	public void testPut() {
-		assertEquals(dbInstance.putUser("mikeboydbrowne", "1234"), 1);
+	public void addUser() {
+		assertEquals(dbInstance.putUser("mikeboydbrowne", "1234"), 0);
 	}
-
+	
+	@Test
+	public void testPersistance() {
+		assertTrue(dbInstance.containsUser("mikeboydbrowne"));
+	}
+	
+	@Test
+	public void testPasswordAuth() {
+		assertTrue(dbInstance.passwordAuth("mikeboydbrowne", "1234"));
+	}
 }

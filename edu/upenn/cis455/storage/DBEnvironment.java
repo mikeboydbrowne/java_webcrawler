@@ -11,12 +11,7 @@ import com.sleepycat.persist.StoreConfig;
 
 public class DBEnvironment {
 	
-	// store for data from webapp
-	private static String userDirectory = null;
-	private static Environment userEnv;
-	private static EntityStore userStore;
-	
-	// store for data from crawler
+	// store for data from webapp/crawler
 	private static String crawlerDirectory = null;
 	private static Environment crawlerEnv;
 	private static EntityStore crawlerStore;
@@ -62,22 +57,6 @@ public class DBEnvironment {
 	}
 	
 	/**
-	 * Returns a handle to the userStore
-	 * @return EntityStore
-	 */
-//	public EntityStore getUserStore() {
-//		return userStore;
-//	}
-//	
-//	/**
-//	 * Returns a handle to the userEnv
-//	 * @return Environment
-//	 */
-//	public Environment getUserEnv() {
-//		return userEnv;
-//	}
-	
-	/**
 	 * Returns a handle to the crawlerStore
 	 * @return EntityStore
 	 */
@@ -97,31 +76,10 @@ public class DBEnvironment {
 	 * Shuts down the BerkeleyDB instances for crawlers and users
 	 */
 	public void shutdownDBs() {
-		// shutting down userStore
-		if (userStore != null) {
-			try {
-				userStore.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing store: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-		
-		// shutting down userEnv
-		if (userEnv != null) {
-			try {
-				// Finally, close environment.
-				userEnv.close();
-			} catch (DatabaseException dbe) {
-				System.err.println("Error closing userEnv: " + dbe.toString());
-				System.exit(-1);
-			}
-		}
-		
 		// shutting down crawlerStore
 		if (crawlerStore != null) {
 			try {
-				userStore.close();
+				crawlerStore.close();
 			} catch (DatabaseException dbe) {
 				System.err.println("Error closing store: " + dbe.toString());
 				System.exit(-1);
@@ -132,7 +90,7 @@ public class DBEnvironment {
 		if (crawlerEnv != null) {
 			try {
 				// Finally, close environment.
-				userEnv.close();
+				crawlerEnv.close();
 			} catch (DatabaseException dbe) {
 				System.err.println("Error closing crawlerEnv: " + dbe.toString());
 				System.exit(-1);

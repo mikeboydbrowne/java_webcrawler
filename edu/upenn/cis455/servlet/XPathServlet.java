@@ -121,9 +121,6 @@ public class XPathServlet extends HttpServlet {
 	@Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
 		
-		DBWrapper dbInstance = new DBWrapper("workspace/HW2/data/");
-		dbInstance.putUser("mikeboydbrowne", "1234");
-		
 		// Displaying the interface
 		File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
 		FileInputStream fileInput = new FileInputStream(index);

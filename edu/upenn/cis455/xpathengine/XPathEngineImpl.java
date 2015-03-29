@@ -265,7 +265,11 @@ public class XPathEngineImpl implements XPathEngine {
 				i++;
 			}
 		}
-		return true;
+		if (i == s2Arr.length) {
+			return true;
+		} else {
+			return false;
+		}
 	}
         
 }
