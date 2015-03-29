@@ -197,6 +197,88 @@ public class DBWrapper {
 	}
 	
 	/**
+	 * Get data associated with the URL in question
+	 * @param url - url to get info from
+	 * @return Document
+	 */
+	public Document getDocument(String url) {
+		if (containsDocument(url)) {
+			return di.crawlerData.get(url).getContent();
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Get the last time a document was accessed
+	 * @param url - url to get long from
+	 * @return the last accessed time, 0 if not included or access
+	 */
+	public long getLastAccess(String url) {
+		if (containsDocument(url)) {
+			return di.crawlerData.get(url).getLastAccessed();
+		} else {
+			return 0;
+		}
+	}
+	
+	/**
+	 * Update the document associated with a given url
+	 * @param url - url to update
+	 * @param d - document to put in
+	 * @return true if update was a success, false if not
+	 */
+	public boolean updateDocument(String url, Document d) {
+		if (containsDocument(url)) {
+			CrawlerEntity updatedData = di.crawlerData.get(url);
+			updatedData.updateContent(d);
+			di.crawlerData.delete(url);
+			di.crawlerData.put(updatedData);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Update the time of the crawler data
+	 * @param url - url to be updated
+	 * @param lastAccessed - time to put
+	 * @return true if updated, false if not
+	 */
+	public boolean updateTime(String url, long lastAccessed) {
+		if (containsDocument(url)) {
+			CrawlerEntity updatedData = di.crawlerData.get(url);
+			updatedData.updateTime(lastAccessed);
+			di.crawlerData.delete(url);
+			di.crawlerData.put(updatedData);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Update both the time and document associate with a url
+	 * @param url - url to update
+	 * @param lastAccessed - time to change
+	 * @param d - document to change
+	 * @return true if success, false if not
+	 */
+	public boolean updateTimeandDocument(String url, long lastAccessed, Document d) {
+		if (containsDocument(url)) {
+			CrawlerEntity updatedData = di.crawlerData.get(url);
+			updatedData.updateTime(lastAccessed);
+			updatedData.updateContent(d);
+			di.crawlerData.delete(url);
+			di.crawlerData.put(updatedData);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
 	 * Compares two strings character by character
 	 * @param s1 - string1
 	 * @param s2 - string2
