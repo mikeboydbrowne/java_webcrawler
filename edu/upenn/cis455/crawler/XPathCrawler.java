@@ -57,7 +57,6 @@ public class XPathCrawler {
 			usage();
 		}
 	}
-
 	
 	/**
 	 * Initializes global crawler variables & crawler queue
@@ -126,8 +125,20 @@ public class XPathCrawler {
 				BufferedReader headInput = new BufferedReader(new InputStreamReader(headS.getInputStream()));
 				String res = "";
 				String line = "";
+				String contentType = "";
 				while (!(line = headInput.readLine()).equalsIgnoreCase("")) {
 					res += line + "\n";
+					if (line.contains("Content-Type:")) {
+						contentType = line;
+						if (!checkContentTypeHttp(line))
+							return;
+					} else if (line.contains("Content-Length:")) {
+						if (!checkSizeHttp(line))
+							return;
+					} else if (line.contains("Last-Modified:")) {
+						if (!checkModifiedHttp(url, line))
+							return;
+					}
 				}
 
 				// closing the head socket
@@ -143,6 +154,7 @@ public class XPathCrawler {
 					// opening up a socket for a GET request
 					Socket getS = new Socket(currentURL.getHostName(), currentURL.getPortNo());
 					PrintWriter getOutput = new PrintWriter(getS.getOutputStream());
+					
 
 					// send another request
 					getOutput.println("GET " + currentURL.getFilePath() + " HTTP/1.1");
@@ -151,20 +163,53 @@ public class XPathCrawler {
 					getOutput.println("");
 					getOutput.flush();
 					
-
+					// Setting up JTidy
+					Tidy domParse = new Tidy();
+					domParse.setForceOutput(true);
+					domParse.setShowErrors(0);
+					domParse.setQuiet(true);
+					boolean isHTML = !contentType.contains("xml");
+					
+					// HTML Parsing
+					Document docTemp = null;
+					
+					// XML parsing
+					DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
+					DocumentBuilder	dom = null;
+					
+					// parsing HTML
+					if (isHTML) {
+						docTemp = domParse.parseDOM(new BufferedReader(new InputStreamReader(getS.getInputStream())), null);
+						
+						// searching document
+						searchForUrls(docTemp);
+						
+						// adding to store
+						dbInstance.putDocument(url, docTemp);
+						dbInstance.updateTime(url, currentDate.getTime());
+					
+					// parsing XML
+					} else {
+						try {
+							dom = builder.newDocumentBuilder();
+							docTemp = dom.parse(getS.getInputStream());
+						} catch (ParserConfigurationException e) {
+							e.printStackTrace();
+						} catch (SAXException e) {
+							e.printStackTrace();
+						}
+						
+						// EVENTUALLY -> check xpaths & add to channel
+						
+						// adding to store
+						dbInstance.putDocument(url, docTemp);
+						dbInstance.updateTime(url, currentDate.getTime());
+					}
+				
+				// if content isn't crawlable
 				} else {
 					return;
 				}
-				// Check size --> small enough
-				// Check contains --> contained
-				// Check if-modified since --> not modified
-				// Modify lastAccessed of record
-				// Download, update document and time, look for links + add to
-				// queue
-				// Download, create new document and time record, look for links
-				// + add to queue
-				// Don't do anything
-
 			}
 		}
 		return;
@@ -176,7 +221,9 @@ public class XPathCrawler {
 	 * @return true if content type is one to be examined, false if not
 	 */
 	private static boolean checkContentTypeHttp(String res) {
-		return true;
+		String contentType = res.split(";")[0];
+		return (contentType.endsWith("text/html") || contentType.endsWith("text/xml") ||
+				contentType.endsWith("application/xml") || contentType.endsWith("+xml"));
 	}
 	
 	/**
