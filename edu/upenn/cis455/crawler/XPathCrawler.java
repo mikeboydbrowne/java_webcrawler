@@ -10,7 +10,9 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -26,6 +28,7 @@ import org.w3c.dom.NodeList;
 import org.w3c.tidy.Tidy;
 import org.xml.sax.SAXException;
 
+import edu.upenn.cis455.crawler.info.RobotsTxtInfo;
 import edu.upenn.cis455.crawler.info.URLInfo;
 import edu.upenn.cis455.storage.DBWrapper;
 
@@ -42,6 +45,7 @@ public class XPathCrawler {
 	static HashSet<String> previouslySearched = new HashSet<String>();
 	static SimpleDateFormat universalFormat = null;
 	static Date currentDate = null;
+	static HashMap<String, RobotsTxtInfo> robotsMap = new HashMap<String, RobotsTxtInfo>();
 
 	public static void main(String[] args) throws UnknownHostException,
 			IOException {
@@ -92,7 +96,7 @@ public class XPathCrawler {
 				currentProtocol = "http://";
 			}
 			// checking politeness prior to downloading
-			if (!politeness(nextUrl)) {
+			if (politeness(nextUrl)) {
 				processUrl(nextUrl);
 			} 
 			previouslySearched.add(nextUrl);
@@ -121,17 +125,15 @@ public class XPathCrawler {
 				// sent first request to url
 				headOutput.println("HEAD " + currentURL.getFilePath() + " HTTP/1.1");
 				headOutput.println("Host: localhost");
-				headOutput.println("User-Agent: cis455crawler");
+				headOutput.println("User-agent: cis455crawler");
 				headOutput.println("");
 				headOutput.flush();
 				System.out.println("Checking crawlability of: " + url);
 				// get input
 				BufferedReader headInput = new BufferedReader(new InputStreamReader(headS.getInputStream()));
-				String res = "";
 				String line = "";
 				String contentType = "";
 				while (!(line = headInput.readLine()).equalsIgnoreCase("")) {
-					res += line + "\n";
 					if (line.contains("Content-Type:")) {
 						contentType = line;
 						if (!checkContentTypeHttp(line))
@@ -154,7 +156,7 @@ public class XPathCrawler {
 				// send another request
 				getOutput.println("GET " + currentURL.getFilePath() + " HTTP/1.1");
 				getOutput.println("Host: localhost");
-				getOutput.println("User-Agent: cis455crawler");
+				getOutput.println("User-agent: cis455crawler");
 				getOutput.println("");
 				getOutput.flush();
 				// Setting up JTidy
@@ -199,6 +201,7 @@ public class XPathCrawler {
 					dbInstance.putDocument(url, docTemp);
 					dbInstance.updateTime(url, currentDate.getTime());
 				}
+				getS.close();
 			}
 		}
 		return;
@@ -243,6 +246,7 @@ public class XPathCrawler {
 		// open up a socket to send a HEAD request
 		HttpsURLConnection headConnect = (HttpsURLConnection) new URL(url).openConnection();
 		headConnect.setRequestMethod("HEAD");
+		headConnect.setRequestProperty("User-agent:", "cis455crawler");
 		int contentLength = headConnect.getContentLength();
 		long lastModified = headConnect.getLastModified();
 		String contentType = headConnect.getContentType();
@@ -255,6 +259,7 @@ public class XPathCrawler {
 			// open up a new connection
 			HttpsURLConnection getConnect = (HttpsURLConnection) new URL(url).openConnection();
 			getConnect.setRequestMethod("GET");
+			getConnect.setRequestProperty("User-agent:", "cis455crawler");
 			// Setting up JTidy
 			Tidy domParse = new Tidy();
 			domParse.setForceOutput(true);
@@ -438,23 +443,80 @@ public class XPathCrawler {
 	}
 	
 	private static boolean politeness(String url) throws UnknownHostException, IOException {
-		// fixing url to use URLInfo
+		// getting the robots.txt file
 		String urlInfo = "";
 		if (url.startsWith("https://"))
 			urlInfo = url.replaceFirst("s", "");
 		URLInfo currentInfo = new URLInfo(urlInfo);
+		RobotsTxtInfo currentRobots = null;
 		String newUrl = currentProtocol + currentInfo.getHostName() + "/robots.txt";
-		HttpsURLConnection getConnect = (HttpsURLConnection) new URL(newUrl).openConnection();
-		getConnect.setRequestMethod("GET");
-		String res = "";
-		int line;
-		InputStream getInput = getConnect.getInputStream();
-		while ((line = getInput.read()) != -1 ) {
-			res += (char) line;
+		// checking if not already contained
+		if (!robotsMap.containsKey(newUrl)) {
+			HttpsURLConnection getConnect = (HttpsURLConnection) new URL(newUrl).openConnection();
+			getConnect.setRequestMethod("GET");
+			String res = "";
+			int line;
+			InputStream getInput = getConnect.getInputStream();
+			while ((line = getInput.read()) != -1 ) {
+				res += (char) line;
+			}
+			// Parsing and storing robots.txt
+			String[] agents = res.split("\n\n");
+			currentRobots = new RobotsTxtInfo();
+			for (String s : agents) {
+				String agent = "";
+				for (String l : s.split("\n")) {
+	
+					// Comment
+					if (l.startsWith("#")) {
+					// User-agent
+					} else if (l.startsWith("User-agent:")) {
+						agent = l.split(" ")[1];
+						currentRobots.addUserAgent(agent);
+					// Disallowed links
+					} else if (l.startsWith("Disallow:")) {
+						String disallowed = l.split(" ")[1];
+						currentRobots.addDisallowedLink(agent, disallowed);
+					// Crawl-delays
+					} else if (l.startsWith("Crawl-delay:")) {
+						int delay = Integer.parseInt(l.split(" ")[1]);
+						currentRobots.addCrawlDelay(agent, delay);
+					}
+				}
+			}
+			robotsMap.put(newUrl, currentRobots);
+		} else {
+			currentRobots = robotsMap.get(newUrl);
 		}
-		System.out.println(res);
-		
-		return false;
+		// getting structures and values for either cis455crawler or *
+		ArrayList<String> disallowedLinks = null;;
+		int crawlDelay = 0;
+		// if robots specifies cis455crawler rules
+		if (currentRobots.containsUserAgent("cis455crawler")) {
+			disallowedLinks = currentRobots.getDisallowedLinks("cis455crawler");
+			crawlDelay = currentRobots.getCrawlDelay("cis455crawler");
+			for (String s : disallowedLinks) {
+				// if link is disallowed
+				if (equals(currentProtocol + currentInfo.getHostName() + s, url)) {
+					return false;
+				}
+			} 
+			return true;
+		// if robots specifies general rules
+		} else if (currentRobots.containsUserAgent("*")) {
+			disallowedLinks = currentRobots.getDisallowedLinks("*");
+			crawlDelay = currentRobots.getCrawlDelay("*");
+			for (String s : disallowedLinks) {
+				// if link is disallowed
+				if (equals(currentProtocol + currentInfo.getHostName() + s, url)) {
+					return false;
+				}
+			} 
+			return true;
+		// assume politeness if no robots.txt
+		} else {
+			return true;
+		}
 	}
 
 	/**
