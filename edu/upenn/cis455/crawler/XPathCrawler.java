@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,6 +31,7 @@ import org.xml.sax.SAXException;
 
 import edu.upenn.cis455.crawler.info.RobotsTxtInfo;
 import edu.upenn.cis455.crawler.info.URLInfo;
+import edu.upenn.cis455.storage.CrawlerEntity;
 import edu.upenn.cis455.storage.DBWrapper;
 
 
@@ -142,8 +144,10 @@ public class XPathCrawler {
 						if (!checkSizeHttp(line))
 							return;
 					} else if (line.contains("Last-Modified:")) {
-						if (!checkModifiedHttp(url, line))
+						if (!checkModifiedHttp(url, line)) {
+							processWithoutDownload(url);
 							return;
+						}
 					}
 				}
 				// closing the head socket
@@ -207,6 +211,28 @@ public class XPathCrawler {
 		return;
 	}
 	
+	private static void processWithoutDownload(String url) {
+		Document d = dbInstance.getDocument(url);
+		boolean isHTML = !url.endsWith("xml");
+		System.out.println("NOT Downloading: " + url);
+		if (isHTML) {
+			// searching document
+			searchForUrls(d);
+			// updating last accessed time in store
+			System.out.println("Finished processing: " + url);
+			System.out.println("");
+			dbInstance.updateTime(url, currentDate.getTime());
+		// parsing XML
+		} else {
+			// EVENTUALLY -> check xpaths & add to channel
+			
+			// updating last accessed time in store
+			System.out.println("Finished processing: " + url);
+			System.out.println("");
+			dbInstance.updateTime(url, currentDate.getTime());
+		}
+	}
+	
 	/**
 	 * Returns whether or not the content type of a url's HEAD response is ok to examine
 	 * @param res - HEAD response to check
@@ -233,7 +259,15 @@ public class XPathCrawler {
 	 * @return true if content is recent enough, false if not
 	 */
 	private static boolean checkModifiedHttp(String url, String res) {
-		return true;
+		long lastAccessed = dbInstance.getLastAccess(url);
+		Date lastAcc = new Date(lastAccessed);
+		Date lastMod = null;
+		try {
+			lastMod = universalFormat.parse(res);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		return lastAcc.before(lastMod);
 	}
 	
 	/**
@@ -249,67 +283,91 @@ public class XPathCrawler {
 		headConnect.setRequestProperty("User-agent:", "cis455crawler");
 		int contentLength = headConnect.getContentLength();
 		long lastModified = headConnect.getLastModified();
+		Date lM = new Date(lastModified);
 		String contentType = headConnect.getContentType();
 		// disconnect after getting relevant info
 		headConnect.disconnect();
 		System.out.println("Checking crawlability of: " + url);
-		// if content type is appropriate, it's small enough, and has been modified since last crawled
-		if (checkContentTypeHttps(contentType) && 
-				checkSizeHttps(contentLength) && checkModifiedHttps(url, lastModified)) {
-			// open up a new connection
-			HttpsURLConnection getConnect = (HttpsURLConnection) new URL(url).openConnection();
-			getConnect.setRequestMethod("GET");
-			getConnect.setRequestProperty("User-agent:", "cis455crawler");
+		// if content type is appropriate, it's small enough
+		if (checkContentTypeHttps(contentType) && checkSizeHttps(contentLength)) {
 			// Setting up JTidy
 			Tidy domParse = new Tidy();
 			domParse.setForceOutput(true);
 			domParse.setShowErrors(0);
 			domParse.setQuiet(true);
-			boolean isHTML = true;
-			// Checking if html or xml
-			if (getConnect.getContentType() != null) {
-				isHTML = !getConnect.getContentType().endsWith("xml");
-			}
 			// HTML Parsing
 			Document docTemp = null;
 			// XML parsing
 			DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
 			DocumentBuilder	dom = null;
-			// parsing HTML
-			System.out.println("Downloading: " + url);
-			if (isHTML) {
-				try {
-					docTemp = domParse.parseDOM(getConnect.getInputStream(), null);
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
+			// checking if it was modified since last pull
+			if (checkModifiedHttps(url, lastModified)) {
+				// open up a new connection
+				HttpsURLConnection getConnect = (HttpsURLConnection) new URL(url).openConnection();
+				getConnect.setRequestMethod("GET");
+				getConnect.setRequestProperty("User-agent:", "cis455crawler");
+				boolean isHTML = true;
+				// Checking if html or xml
+				if (getConnect.getContentType() != null) {
+					isHTML = !getConnect.getContentType().endsWith("xml");
 				}
-				// searching document
-				searchForUrls(docTemp);
-				// adding to store
-				System.out.println("Finished processing: " + url);
-				System.out.println("");
-				dbInstance.putDocument(url, docTemp);
-				dbInstance.updateTime(url, currentDate.getTime());
-			// parsing XML
+				// parsing HTML
+				System.out.println("Downloading: " + url);
+				if (isHTML) {
+					try {
+						docTemp = domParse.parseDOM(getConnect.getInputStream(), null);
+					} catch (MalformedURLException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					// searching document
+					searchForUrls(docTemp);
+					// adding to store
+					System.out.println("Finished processing: " + url);
+					System.out.println("");
+					dbInstance.putDocument(url, docTemp);
+					dbInstance.updateTime(url, currentDate.getTime());
+				// parsing XML
+				} else {
+					try {
+						dom = builder.newDocumentBuilder();
+						docTemp = dom.parse(getConnect.getInputStream());
+					} catch (ParserConfigurationException e) {
+						e.printStackTrace();
+					} catch (SAXException e) {
+						e.printStackTrace();
+					}
+					
+					// EVENTUALLY -> check xpaths & add to channel
+					
+					// adding to store
+					System.out.println("Finished processing: " + url);
+					System.out.println("");
+					dbInstance.putDocument(url, docTemp);
+					dbInstance.updateTime(url, currentDate.getTime());
+				}
+			// working with in-data store
 			} else {
-				try {
-					dom = builder.newDocumentBuilder();
-					docTemp = dom.parse(getConnect.getInputStream());
-				} catch (ParserConfigurationException e) {
-					e.printStackTrace();
-				} catch (SAXException e) {
-					e.printStackTrace();
+				Document d = dbInstance.getDocument(url);
+				boolean isHTML = !url.endsWith("xml");
+				System.out.println("NOT Downloading: " + url);
+				if (isHTML) {
+					// searching document
+					searchForUrls(d);
+					// updating last accessed time in store
+					System.out.println("Finished processing: " + url);
+					System.out.println("");
+					dbInstance.updateTime(url, currentDate.getTime());
+				// parsing XML
+				} else {
+					// EVENTUALLY -> check xpaths & add to channel
+					
+					// updating last accessed time in store
+					System.out.println("Finished processing: " + url);
+					System.out.println("");
+					dbInstance.updateTime(url, currentDate.getTime());
 				}
-				
-				// EVENTUALLY -> check xpaths & add to channel
-				
-				// adding to store
-				System.out.println("Finished processing: " + url);
-				System.out.println("");
-				dbInstance.putDocument(url, docTemp);
-				dbInstance.updateTime(url, currentDate.getTime());
 			}
 		// if content isn't crawlable
 		} else {
@@ -351,11 +409,13 @@ public class XPathCrawler {
 	 * @return true if content is recent enough, false if not
 	 */
 	private static boolean checkModifiedHttps(String url, long date) {
-		long lastModified = dbInstance.getLastAccess(url);
-		if (lastModified == 0) {
+		long lastAccessed = dbInstance.getLastAccess(url);
+		Date lastAcc = new Date(lastAccessed);
+		
+		if (lastAccessed == 0) {
 			return true;
 		} else {
-			return (lastModified < date);
+			return (lastAcc.before(new Date(date)));
 		}
 	}
 	
@@ -500,7 +560,11 @@ public class XPathCrawler {
 				if (equals(currentProtocol + currentInfo.getHostName() + s, url)) {
 					return false;
 				}
-			} 
+			}
+			if (crawlDelay != 0) {
+				if (dbInstance.getLastAccess(url) > currentDate.getTime() - (long) crawlDelay)
+					return false;
+			}
 			return true;
 		// if robots specifies general rules
 		} else if (currentRobots.containsUserAgent("*")) {
@@ -511,7 +575,11 @@ public class XPathCrawler {
 				if (equals(currentProtocol + currentInfo.getHostName() + s, url)) {
 					return false;
 				}
-			} 
+			}
+			if (crawlDelay != 0) {
+				if (dbInstance.getLastAccess(url) > currentDate.getTime() - (long) crawlDelay)
+					return false;
+			}
 			return true;
 		// assume politeness if no robots.txt
 		} else {

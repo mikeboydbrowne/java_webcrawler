@@ -8,7 +8,7 @@ import com.sleepycat.persist.model.PrimaryKey;
 @Entity
 public class CrawlerEntity {
 	
-	private Document content;
+	private String content;
 	private long lastAccessed;
 	
 	@PrimaryKey
@@ -36,7 +36,7 @@ public class CrawlerEntity {
 	 * Updates the content associated with the url
 	 * @param Document
 	 */
-	public void updateContent(Document d) {
+	public void updateContent(String d) {
 		this.content = d;
 	}
 	
@@ -52,7 +52,7 @@ public class CrawlerEntity {
 	 * Return the content at the url address
 	 * @return Document
 	 */
-	public Document getContent() {
+	public String getContent() {
 		return content;
 	}
 

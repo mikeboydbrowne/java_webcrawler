@@ -1,8 +1,22 @@
 package edu.upenn.cis455.storage;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.w3c.dom.Document;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
+import org.w3c.tidy.*;
 
 public class DBWrapper {
 	
@@ -69,11 +83,28 @@ public class DBWrapper {
 	 * 			
 	 */
 	public int putDocument(String url, Document d) {
-		if(url != null && d != null && containsDocument(url)) {
+		if(url != null && d != null && !containsDocument(url)) {
 			// create the CrawlerEntity
 			CrawlerEntity newData = new CrawlerEntity();
 			newData.setURL(url);
-			newData.updateContent(d);
+			
+			// transforming dom to string
+			DOMSource domSource = new DOMSource(d);
+			StringWriter writer = new StringWriter();
+			StreamResult domStream = new StreamResult(writer);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer;
+			try {
+				transformer = tf.newTransformer();
+				transformer.transform(domSource, domStream);
+			} catch (TransformerException e) {
+				e.printStackTrace();
+			}
+			StringBuffer sb = writer.getBuffer(); 
+			String stringifiedDom = sb.toString();
+		    
+		    // updating document
+		    newData.updateContent(stringifiedDom);
 
 			// put the object in the database
 			di.crawlerData.put(newData);
@@ -203,7 +234,14 @@ public class DBWrapper {
 	 */
 	public Document getDocument(String url) {
 		if (containsDocument(url)) {
-			return di.crawlerData.get(url).getContent();
+			String stringifiedDom = di.crawlerData.get(url).getContent();
+			InputStream domStream = new ByteArrayInputStream(stringifiedDom.getBytes(StandardCharsets.UTF_8));
+			// Setting up JTidy
+			Tidy domParse = new Tidy();
+			domParse.setForceOutput(true);
+			domParse.setShowErrors(0);
+			domParse.setQuiet(true);
+			return domParse.parseDOM(domStream, null);
 		} else {
 			return null;
 		}
@@ -231,7 +269,26 @@ public class DBWrapper {
 	public boolean updateDocument(String url, Document d) {
 		if (containsDocument(url)) {
 			CrawlerEntity updatedData = di.crawlerData.get(url);
-			updatedData.updateContent(d);
+			
+			// transforming dom to string
+			DOMSource domSource = new DOMSource(d);
+			StringWriter writer = new StringWriter();
+			StreamResult domStream = new StreamResult(writer);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer;
+			try {
+				transformer = tf.newTransformer();
+				transformer.transform(domSource, domStream);
+			} catch (TransformerException e) {
+				e.printStackTrace();
+			}
+			StringBuffer sb = writer.getBuffer(); 
+			String stringifiedDom = sb.toString(); 
+					    
+			// updating document
+			updatedData.updateContent(stringifiedDom);
+			
+			// putting in store
 			di.crawlerData.delete(url);
 			di.crawlerData.put(updatedData);
 			return true;
@@ -269,7 +326,26 @@ public class DBWrapper {
 		if (containsDocument(url)) {
 			CrawlerEntity updatedData = di.crawlerData.get(url);
 			updatedData.updateTime(lastAccessed);
-			updatedData.updateContent(d);
+			
+			// transforming dom to string
+			DOMSource domSource = new DOMSource(d);
+			StringWriter writer = new StringWriter();
+			StreamResult domStream = new StreamResult(writer);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer;
+			try {
+				transformer = tf.newTransformer();
+				transformer.transform(domSource, domStream);
+			} catch (TransformerException e) {
+				e.printStackTrace();
+			}
+			StringBuffer sb = writer.getBuffer(); 
+			String stringifiedDom = sb.toString();
+								    
+			// updating document
+			updatedData.updateContent(stringifiedDom);
+						
+			// putting in store
 			di.crawlerData.delete(url);
 			di.crawlerData.put(updatedData);
 			return true;
