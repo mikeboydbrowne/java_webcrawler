@@ -112,12 +112,12 @@ public class XPathServlet extends HttpServlet {
 	}
 
 	@Override
-	public void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws FileNotFoundException {
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
 		// Displaying the interface
 		String reqPath = request.getPathInfo();
+		System.out.println(reqPath);
 		if (reqPath.equalsIgnoreCase("/")) {
-			System.out.println(reqPath);
+			// Displaying home interface
 			File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
 			FileInputStream fileInput = new FileInputStream(index);
 			int content;
@@ -130,8 +130,8 @@ public class XPathServlet extends HttpServlet {
 				e1.printStackTrace();
 			}
 		} else if (reqPath.startsWith("/createAccount")) {
-			System.out.println(reqPath);
-			File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
+			// Displaying createAccount interface
+			File index = new File("workspace/HW2/WebContent/WEB-INF/createAccount.html");
 			FileInputStream fileInput = new FileInputStream(index);
 			int content;
 			try {
@@ -143,7 +143,34 @@ public class XPathServlet extends HttpServlet {
 				e1.printStackTrace();
 			}
 		} else if (reqPath.startsWith("/channels")) {
+			// Displaying first part of interface
+			File part1 = new File("workspace/HW2/WebContent/WEB-INF/channels1.html");
+			FileInputStream fileInput1 = new FileInputStream(part1);
+			int content1;
+			try {
+				while ((content1 = fileInput1.read()) != -1) {
+					response.getOutputStream().write(content1);
+				}
+				fileInput1.close(); // Closing the file stream
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 			
+			// Adding channel input
+			
+			// Displaying second part of interface
+			// System.out.println(reqPath);
+			File part2 = new File("workspace/HW2/WebContent/WEB-INF/channels2.html");
+			FileInputStream fileInput2 = new FileInputStream(part2);
+			int content2;
+			try {
+				while ((content2 = fileInput2.read()) != -1) {
+					response.getOutputStream().write(content2);
+				}
+				fileInput2.close(); // Closing the file stream
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		} else if (reqPath.startsWith("/user/")) {
 			
 		} else if (reqPath.startsWith("/channels/view/")) {

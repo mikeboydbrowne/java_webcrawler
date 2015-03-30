@@ -1,7 +1,5 @@
 package edu.upenn.cis455.storage;
 
-import org.w3c.dom.Document;
-
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 
@@ -14,11 +12,6 @@ public class CrawlerEntity {
 	@PrimaryKey
 	private String url;
 	
-	
-//	public CrawlerEntity(String url, Document d) {
-//		this.url = url;
-//		this.content = d;
-//	}
 	
 	public void setURL(String url) {
 		this.url = url;
