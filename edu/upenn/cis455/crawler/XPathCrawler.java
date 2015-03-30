@@ -2,6 +2,7 @@ package edu.upenn.cis455.crawler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
@@ -82,6 +83,7 @@ public class XPathCrawler {
 	private static void run() throws UnknownHostException, IOException {
 		// while the queue is still full, keep crawling
 		while (!urlQueue.isEmpty()) {
+			// storing information about the url
 			String nextUrl = urlQueue.poll();
 			currentUrl = nextUrl;
 			if (nextUrl.startsWith("https://")) {
@@ -89,13 +91,15 @@ public class XPathCrawler {
 			} else {
 				currentProtocol = "http://";
 			}
-			processUrl(nextUrl);
+			// checking politeness prior to downloading
+			if (!politeness(nextUrl)) {
+				processUrl(nextUrl);
+			} 
 			previouslySearched.add(nextUrl);
 		}
 
 		// when the queue is empty exit the program
 		exit();
-
 	}
 
 	/**
@@ -431,6 +435,26 @@ public class XPathCrawler {
 	 */
 	private static void exit() {
 		System.out.println("Done crawling");
+	}
+	
+	private static boolean politeness(String url) throws UnknownHostException, IOException {
+		// fixing url to use URLInfo
+		String urlInfo = "";
+		if (url.startsWith("https://"))
+			urlInfo = url.replaceFirst("s", "");
+		URLInfo currentInfo = new URLInfo(urlInfo);
+		String newUrl = currentProtocol + currentInfo.getHostName() + "/robots.txt";
+		HttpsURLConnection getConnect = (HttpsURLConnection) new URL(newUrl).openConnection();
+		getConnect.setRequestMethod("GET");
+		String res = "";
+		int line;
+		InputStream getInput = getConnect.getInputStream();
+		while ((line = getInput.read()) != -1 ) {
+			res += (char) line;
+		}
+		System.out.println(res);
+		
+		return false;
 	}
 
 	/**
