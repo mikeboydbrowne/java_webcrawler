@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.xml.parsers.DocumentBuilder;
@@ -26,6 +27,7 @@ import org.w3c.tidy.Tidy;
 import org.xml.sax.SAXException;
 
 import edu.upenn.cis455.crawler.info.URLInfo;
+import edu.upenn.cis455.storage.CrawlerEntity;
 import edu.upenn.cis455.storage.DBWrapper;
 
 
@@ -85,6 +87,7 @@ public class XPathCrawler {
 		while (!urlQueue.isEmpty()) {
 			String nextUrl = urlQueue.poll();
 			Queue<String> currentQueue = urlQueue;
+			HashSet<String> prev = previouslySearched;
 			currentUrl = nextUrl;
 			if (nextUrl.startsWith("https://")) {
 				currentProtocol = "https://";
@@ -228,7 +231,7 @@ public class XPathCrawler {
 			
 			// Checking if html or xml
 			if (getConnect.getContentType() != null) {
-				isHTML = !getConnect.getContentType().contains("xml");
+				isHTML = !getConnect.getContentType().endsWith("xml");
 			}
 			
 			// HTML Parsing
@@ -252,6 +255,8 @@ public class XPathCrawler {
 				searchForUrls(docTemp);
 				
 				// adding to store
+				dbInstance.putDocument(url, docTemp);
+				dbInstance.updateTime(url, currentDate.getTime());
 			
 			// parsing XML
 			} else {
@@ -264,10 +269,11 @@ public class XPathCrawler {
 					e.printStackTrace();
 				}
 				
-				// searching document
-				searchForUrls(docTemp);
+				// EVENTUALLY -> check xpaths & add to channel
 				
 				// adding to store
+				dbInstance.putDocument(url, docTemp);
+				dbInstance.updateTime(url, currentDate.getTime());
 			}
 		
 		// if content isn't crawlable
@@ -367,21 +373,30 @@ public class XPathCrawler {
 	}
 	
 	private static void addLink(Node n) {
-		
 		// get the linked url & the current host url
 		String linkedUrl = n.getAttributes().getNamedItem("href").getNodeValue();
 		String hostUrl = currentUrl;
 		hostUrl = hostUrl.replaceFirst("s", "");
+		if ((!hostUrl.endsWith("/") && !(hostUrl.endsWith(".html") || hostUrl.endsWith(".xml")) && !hostUrl.contains("?"))) {
+			hostUrl += "/";
+		}
 		
 		// url needs reformatting
 		if (!(linkedUrl.startsWith("http://") || linkedUrl.startsWith("https://") || linkedUrl.startsWith("www."))) {
 			URLInfo currentInfo = new URLInfo(hostUrl);
 		
-			// add reformatted string
-			if (!linkedUrl.startsWith("/")) {
-				urlQueue.add(currentProtocol + currentInfo.getHostName() + "/" + linkedUrl);
+			// linked url is relative off of current host
+			if (linkedUrl.startsWith("/")) {
+				String newUrl = currentProtocol + currentInfo.getHostName() + linkedUrl;
+				if (!previouslySearched.contains(newUrl) && !urlQueue.contains(newUrl))
+					urlQueue.add(newUrl);
+			
+			// linked url is relative off of current filepath
 			} else {
-				urlQueue.add(currentProtocol + currentInfo.getHostName() + linkedUrl);
+				String currentPath = currentInfo.getFilePath().substring(0, currentInfo.getFilePath().lastIndexOf("/") + 1);
+				String newUrl = currentProtocol + currentInfo.getHostName() + currentPath + linkedUrl;
+				if (!previouslySearched.contains(newUrl) && !urlQueue.contains(newUrl))
+					urlQueue.add(newUrl);
 			}
 		
 		// url does not need reformatting
@@ -391,7 +406,7 @@ public class XPathCrawler {
 	}
 
 	private static void exit() {
-
+		System.out.println("Done crawling");
 	}
 
 	public static void usage() {
@@ -406,19 +421,21 @@ public class XPathCrawler {
 		boolean ret = false;
 		int i = 0;
 		char[] s2Arr = s2.toCharArray();
-		for (char c : s1.toCharArray()) {
-			if (c != s2Arr[i]) {
-				return ret;
-			} else {
-				i++;
+		if (s2.length() == s1.length()) {
+			for (char c : s1.toCharArray()) {
+				if (c != s2Arr[i]) {
+					return ret;
+				} else {
+					i++;
+				}
 			}
-		}
-		if (i == s2Arr.length) {
-			return true;
+			if (i == s2Arr.length) {
+				return true;
+			} else {
+				return false;
+			}
 		} else {
 			return false;
 		}
 	}
-
-	
 }
