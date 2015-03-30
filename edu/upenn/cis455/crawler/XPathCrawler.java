@@ -20,6 +20,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.tidy.Tidy;
 import org.xml.sax.SAXException;
 
@@ -29,7 +31,9 @@ import edu.upenn.cis455.storage.DBWrapper;
 
 public class XPathCrawler {
 
-	static String initialURL = "";
+	static String initialUrl = "";
+	static String currentUrl = "";
+	static String currentProtocol = "";
 	static DBWrapper dbInstance = null;
 	static int maxSize;
 	static int numFiles;
@@ -41,7 +45,7 @@ public class XPathCrawler {
 	public static void main(String[] args) throws UnknownHostException,
 			IOException {
 		if (args.length == 3 || args.length == 4) {
-			initialURL = args[0];
+			initialUrl = args[0];
 			dbInstance = new DBWrapper(args[1]);
 			maxSize = Integer.parseInt(args[2]) * 100000;
 			if (args.length == 4)
@@ -65,7 +69,7 @@ public class XPathCrawler {
 
 		// initialze the queue and add it's first link
 		urlQueue = new LinkedList<String>();
-		urlQueue.add(initialURL);
+		urlQueue.add(initialUrl);
 
 		// start crawling
 		run();
@@ -80,6 +84,13 @@ public class XPathCrawler {
 		// while the queue is still full, keep crawling
 		while (!urlQueue.isEmpty()) {
 			String nextUrl = urlQueue.poll();
+			Queue<String> currentQueue = urlQueue;
+			currentUrl = nextUrl;
+			if (nextUrl.startsWith("https://")) {
+				currentProtocol = "https://";
+			} else {
+				currentProtocol = "http://";
+			}
 			processUrl(nextUrl);
 			previouslySearched.add(nextUrl);
 		}
@@ -213,18 +224,21 @@ public class XPathCrawler {
 			domParse.setForceOutput(true);
 			domParse.setShowErrors(0);
 			domParse.setQuiet(true);
+			boolean isHTML = true;
 			
 			// Checking if html or xml
-			boolean	isHTML = !getConnect.getContentType().contains("xml");
+			if (getConnect.getContentType() != null) {
+				isHTML = !getConnect.getContentType().contains("xml");
+			}
 			
 			// HTML Parsing
 			Document docTemp = null;
 			
-			// XML Parsing
+			// XML parsing
 			DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
 			DocumentBuilder	dom = null;
 			
-			// Parsing HTML
+			// parsing HTML
 			if (isHTML) {
 				try {
 					docTemp = domParse.parseDOM(getConnect.getInputStream(), null);
@@ -233,9 +247,13 @@ public class XPathCrawler {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				
+				// searching document
 				searchForUrls(docTemp);
+				
+				// adding to store
 			
-			// Parsing XML
+			// parsing XML
 			} else {
 				try {
 					dom = builder.newDocumentBuilder();
@@ -245,10 +263,14 @@ public class XPathCrawler {
 				} catch (SAXException e) {
 					e.printStackTrace();
 				}
+				
+				// searching document
 				searchForUrls(docTemp);
+				
+				// adding to store
 			}
 		
-		// if content isn't what it expects
+		// if content isn't crawlable
 		} else {
 			return;
 		}
@@ -260,12 +282,16 @@ public class XPathCrawler {
 	 * @return true if content type is one to be examined, false if not
 	 */
 	private static boolean checkContentTypeHttps(String res) {
-		if (res.contains("text/xml")) {
-			return true;
-		} else if (res.contains("text/html")) {
-			return true;
+		if (res != null) {
+			if (res.contains("text/xml")) {
+				return true;
+			} else if (res.contains("text/html")) {
+				return true;
+			} else {
+				return res.contains("+xml");
+			}
 		} else {
-			return res.contains("+xml");
+			return true;
 		}
 	}
 
@@ -296,8 +322,72 @@ public class XPathCrawler {
 		}
 	}
 	
+	/**
+	 * Start the recursive search for links
+	 * @param d - document to search
+	 */
 	private static void searchForUrls(Document d) {
-		System.out.println("I'm searching for URLs!");
+		Node root = d.getDocumentElement();
+		NodeList children = root.getChildNodes();
+		for (int i = 0; i < children.getLength(); i++) {
+			searchNode(children.item(i));
+		}
+	}
+	
+	/**
+	 * Method to recursively search nodes in a DOM
+	 * @param n - node to recursively search
+	 */
+	private static void searchNode(Node n) {
+		if (n != null) {
+			if (n.hasChildNodes()) {
+				if (isLinkNode(n)) {
+					addLink(n);
+				}
+				NodeList children = n.getChildNodes();
+				for (int i = 0; i < children.getLength(); i++) {
+					searchNode(children.item(i));
+				}
+				
+			} else {
+				if (isLinkNode(n)) {
+					addLink(n);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Checks if a given node is a link node
+	 * @param n - node to examine
+	 * @return true if it is a link node, false if not
+	 */
+	private static boolean isLinkNode(Node n) {
+		return (equals(n.getLocalName(), "a"));
+	}
+	
+	private static void addLink(Node n) {
+		
+		// get the linked url & the current host url
+		String linkedUrl = n.getAttributes().getNamedItem("href").getNodeValue();
+		String hostUrl = currentUrl;
+		hostUrl = hostUrl.replaceFirst("s", "");
+		
+		// url needs reformatting
+		if (!(linkedUrl.startsWith("http://") || linkedUrl.startsWith("https://") || linkedUrl.startsWith("www."))) {
+			URLInfo currentInfo = new URLInfo(hostUrl);
+		
+			// add reformatted string
+			if (!linkedUrl.startsWith("/")) {
+				urlQueue.add(currentProtocol + currentInfo.getHostName() + "/" + linkedUrl);
+			} else {
+				urlQueue.add(currentProtocol + currentInfo.getHostName() + linkedUrl);
+			}
+		
+		// url does not need reformatting
+		} else {
+			urlQueue.add(linkedUrl);
+		}
 	}
 
 	private static void exit() {
@@ -310,6 +400,24 @@ public class XPathCrawler {
 		System.out.println("<database-location>   location of datastore for crawler data");
 		System.out.println("<max file size>       maximum size of a file in MB to be scanned by the crawler");
 		System.out.println("[# of files]          number of files to crawl before exiting the crawler");
+	}
+	
+	private static boolean equals(String s1, String s2) {
+		boolean ret = false;
+		int i = 0;
+		char[] s2Arr = s2.toCharArray();
+		for (char c : s1.toCharArray()) {
+			if (c != s2Arr[i]) {
+				return ret;
+			} else {
+				i++;
+			}
+		}
+		if (i == s2Arr.length) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	
