@@ -115,16 +115,41 @@ public class XPathServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws FileNotFoundException {
 		// Displaying the interface
-		File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
-		FileInputStream fileInput = new FileInputStream(index);
-		int content;
-		try {
-			while ((content = fileInput.read()) != -1) {
-				response.getOutputStream().write(content);
+		String reqPath = request.getPathInfo();
+		if (reqPath.equalsIgnoreCase("/")) {
+			System.out.println(reqPath);
+			File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
+			FileInputStream fileInput = new FileInputStream(index);
+			int content;
+			try {
+				while ((content = fileInput.read()) != -1) {
+					response.getOutputStream().write(content);
+				}
+				fileInput.close(); // Closing the file stream
+			} catch (IOException e1) {
+				e1.printStackTrace();
 			}
-			fileInput.close(); // Closing the file stream
-		} catch (IOException e1) {
-			e1.printStackTrace();
+		} else if (reqPath.startsWith("/createAccount")) {
+			System.out.println(reqPath);
+			File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
+			FileInputStream fileInput = new FileInputStream(index);
+			int content;
+			try {
+				while ((content = fileInput.read()) != -1) {
+					response.getOutputStream().write(content);
+				}
+				fileInput.close(); // Closing the file stream
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		} else if (reqPath.startsWith("/channels")) {
+			
+		} else if (reqPath.startsWith("/user/")) {
+			
+		} else if (reqPath.startsWith("/channels/view/")) {
+			
+		} else if (reqPath.startsWith("/channels/delete/")) {
+			
 		}
 	}
 
