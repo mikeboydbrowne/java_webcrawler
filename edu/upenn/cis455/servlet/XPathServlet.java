@@ -1,134 +1,153 @@
 package edu.upenn.cis455.servlet;
 
 import java.io.*;
-import java.net.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.*;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.w3c.dom.Document;
-import org.w3c.tidy.Tidy;
-import org.xml.sax.SAXException;
 
 import edu.upenn.cis455.storage.DBWrapper;
-import edu.upenn.cis455.xpathengine.*;
+import edu.upenn.cis455.storage.UserEntity;
 
 @SuppressWarnings("serial")
 public class XPathServlet extends HttpServlet {
+	
+	DBWrapper dbInstance = new DBWrapper("/home/cis455/workspace/HW2/data/");
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) {
-		// Parse inputs
-		String htmlXml = standardizeReq(request.getParameter("html/xml"));
-		String xpath = request.getParameter("xpath");
-		String[] xpaths = xpath.split(";");
-		boolean isHTML = true;
-		// Checking if html or xml
-		isHTML = !htmlXml.endsWith(".xml");
-		// Setting up JTidy
-		Tidy domParse = new Tidy();
-		domParse.setForceOutput(true);
-		domParse.setShowErrors(0);
-		domParse.setQuiet(true);
-		// HTML Parsing
-		Document docTemp = null;
-		// XML Parsing
-		DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dom = null;
-		// Parsing HTML
-		if (isHTML) {
+		String reqPath = request.getPathInfo();
+		System.out.println(reqPath);
+		// 
+		if (reqPath.equalsIgnoreCase("/")) {
 			try {
-				docTemp = domParse
-						.parseDOM(new URL(htmlXml).openStream(), null);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
+				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
-			// Parsing XML
-		} else {
-			try {
-				dom = builder.newDocumentBuilder();
-				docTemp = dom.parse(new URL(htmlXml).openStream());
-			} catch (ParserConfigurationException e) {
-				e.printStackTrace();
-			} catch (SAXException e) {
-				e.printStackTrace();
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
+		// validating a user
+		} else if (reqPath.equalsIgnoreCase("/login")) {
+			String userName = request.getParameter("username");
+			String password = request.getParameter("pword");
+			if (dbInstance.passwordAuth(userName, password)) {
+				dbInstance.setCurrentSession(userName);
+				String currentSession = dbInstance.getCurrentSession(userName);
+				Cookie sessionID = new Cookie("sessionID", currentSession);
+				response.addCookie(sessionID);
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-		}
-		// Set up XPATH Engine
-		XPathEngine engine = XPathEngineFactory.getXPathEngine();
-		engine.setXPaths(xpaths);
-		// Evaluating the document
-		boolean[] evaluatedPaths = engine.evaluate(docTemp);
-		// Getting the print writer
-		OutputStream responseOutput = null;
-		String responseText = "";
-		try {
-			responseOutput = response.getOutputStream();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		responseText = "<!DOCTYPE html>"
-				+ "<html lang=\"en\">\n"
-				+ "<head>\n"
-				+ "<title>Webcrawler Interface</title>\n"
-				+ "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-				+ "<!-- Latest compiled and minified CSS -->\n"
-				+ "<link rel=\"stylesheet\"\n"
-				+ "href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css\">\n"
-				+ "<!-- Latest compiled and minified JavaScript -->\n"
-				+ "<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>\n"
-				+ "</head>\n"
-				+ "<body>\n"
-				+ "<div class=\"container\">\n"
-				+ "<div class=\"row\">\n"
-				+ "<div class=\"col-md-4\"></div>\n"
-				+ "<div class=\"col-md-4\">\n"
-				+ "<h1 style=\"text-align: center; margin-top: 50px; margin-bottom; 30px\">Webcrawler Results</h1>";
-		int i = 0;
-		for (boolean b : evaluatedPaths) {
-			responseText += "<h4>Xpath: " + xpaths[i] + " is:" + b
-					+ "</h4>\n<br>\n";
-			i++;
-		}
-		responseText += "<div class=\"control-group\" style=\"text-align: center; margin-top:20px; \">"
-				+ "<button class=\"btn btn-primary\">Back to Crawler Interface</button>"
-				+ "</div>"
-				+ "</div>\n"
-				+ "<div class=\"col-md-4\"></div>\n"
-				+ "</div>\n" + "</div>\n" + "</body>\n" + "</html>";
-		try {
-			responseOutput.write(responseText.getBytes());
-		} catch (IOException e) {
-			e.printStackTrace();
+		// creating a new user
+		} else if (reqPath.equalsIgnoreCase("/createAccount")) {
+			String userName = request.getParameter("username");
+			String password = request.getParameter("pword");
+			String passwordConf = request.getParameter("pwordConf");
+			// add a new user, if conf + password match
+			if (equals(password, passwordConf) && !dbInstance.containsUser(userName)) {
+				dbInstance.putUser(userName, password);
+				dbInstance.setCurrentSession(userName);
+				String currentSession = dbInstance.getCurrentSession(userName);
+				Cookie sessionID = new Cookie("sessionID", currentSession);
+				response.addCookie(sessionID);
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			// redirect if conf + password don't match
+			} else {
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		
+		// user adds channel
+		} else if (reqPath.equalsIgnoreCase("/addChannel")) {
+			// checking if session id
+			Cookie[] cookies = request.getCookies();
+			String sessionId = "";
+			for (Cookie c : cookies) {
+				if (c.getName().equalsIgnoreCase("sessionID"))
+					sessionId = c.getValue();
+			}
+			// if none or non-valid session id
+			if (!dbInstance.isValidSession(sessionId)) {
+				
+			} else {
+				// getting data
+				String name = request.getParameter("name");
+				String xml = request.getParameter("xpaths");
+				String url = request.getParameter("url");
+				
+				Map<String,String> sessionsUsers = dbInstance.getSessionsUsers();
+				
+				// adding channel to DB
+				dbInstance.addChannel(name, xml, url);
+				dbInstance.addChannel(sessionsUsers.get(sessionId), name);
+				
+				// refreshing user page
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		} else if (reqPath.equalsIgnoreCase("/logout")) {
+			System.out.println("Get her!");
 		}
 	}
 
 	@Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
-		// Displaying the interface
 		String reqPath = request.getPathInfo();
 		System.out.println(reqPath);
+		// root
 		if (reqPath.equalsIgnoreCase("/")) {
-			// Displaying home interface
-			File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
-			FileInputStream fileInput = new FileInputStream(index);
-			int content;
-			try {
-				while ((content = fileInput.read()) != -1) {
-					response.getOutputStream().write(content);
-				}
-				fileInput.close(); // Closing the file stream
-			} catch (IOException e1) {
-				e1.printStackTrace();
+			// checking if session id
+			Cookie[] cookies = request.getCookies();
+			String sessionId = "";
+			for (Cookie c : cookies) {
+				if (c.getName().equalsIgnoreCase("sessionID"))
+					sessionId = c.getValue();
 			}
+			// if none or non-valid session id
+			if (!dbInstance.isValidSession(sessionId)) {
+				// Displaying home interface
+				File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
+				FileInputStream fileInput = new FileInputStream(index);
+				int content;
+				try {
+					while ((content = fileInput.read()) != -1) {
+						response.getOutputStream().write(content);
+					}
+					fileInput.close(); // Closing the file stream
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			// if valid session id, redirect
+			} else {
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		// /createAccount
 		} else if (reqPath.startsWith("/createAccount")) {
 			// Displaying createAccount interface
 			File index = new File("workspace/HW2/WebContent/WEB-INF/createAccount.html");
@@ -142,6 +161,7 @@ public class XPathServlet extends HttpServlet {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
+		// /channels
 		} else if (reqPath.startsWith("/channels")) {
 			// Displaying first part of interface
 			File part1 = new File("workspace/HW2/WebContent/WEB-INF/channels1.html");
@@ -157,6 +177,31 @@ public class XPathServlet extends HttpServlet {
 			}
 			
 			// Adding channel input
+			HashMap<String,String> channels = dbInstance.getChannels();
+			if (channels.isEmpty()) {
+				try {
+					response.getOutputStream().write("<div style=\"text-align:center;\">There appear to be no channels in the app</div>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else {
+				int i = 1;
+				for (String n : channels.keySet()) {
+					String newChannel = "<div style=\"text-align: center\">"
+											+ "<div><h4><strong>Channel #" + i +":</strong></h4></div>"
+											+ "<div style=\"margin-top:-5px; margin-bottom:5px\">Name: " + n + "<br>XPaths: " + channels.get(n) + "</div>"
+											+ "<div style=\"display:inline-block; margin-bottom: 10px\">"
+												+ "<button class=\"btn btn-success\" style=\"margin-left: 20px;\">View</button>"
+											+ "</div>"
+										+ "</div>";
+					try {
+						response.getOutputStream().write(newChannel.getBytes());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					i++;
+				}
+			}
 			
 			// Displaying second part of interface
 			// System.out.println(reqPath);
@@ -171,12 +216,143 @@ public class XPathServlet extends HttpServlet {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-		} else if (reqPath.startsWith("/user/")) {
+		// /user
+		} else if (reqPath.startsWith("/user")) {
+			// checking if session id
+			Cookie[] cookies = request.getCookies();
+			if (cookies != null && cookies.length > 0) {
+				String sessionId = "";
+				for (Cookie c : cookies) {
+					if (c.getName().equalsIgnoreCase("sessionID"))
+						sessionId = c.getValue();
+				}
+				System.out.println(sessionId);
+				// output user page if session id is valid
+				if (dbInstance.isValidSession(sessionId)) {
+					Map<String,String> stringsUsers = dbInstance.getSessionsUsers();
+					String user = stringsUsers.get(sessionId);
+					System.out.println(user);
+					UserEntity currentUser = dbInstance.getUser(user);
+					// Displaying home interface
+					File index1 = new File("workspace/HW2/WebContent/WEB-INF/user1.html");
+					FileInputStream fileInput1 = new FileInputStream(index1);
+					int content1;
+					try {
+						while ((content1 = fileInput1.read()) != -1) {
+							response.getOutputStream().write(content1);
+						}
+						fileInput1.close(); // Closing the file stream
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					
+					// Adding left form
+					File index2 = new File("workspace/HW2/WebContent/WEB-INF/user2.html");
+					FileInputStream fileInput2 = new FileInputStream(index2);
+					int content2;
+					try {
+						while ((content2 = fileInput2.read()) != -1) {
+							response.getOutputStream().write(content2);
+						}
+						fileInput2.close(); // Closing the file stream
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					
+					// Adding channel input
+					HashMap<String,String> channels = dbInstance.getChannels();
+					if (channels.isEmpty()) {
+						try {
+							response.getOutputStream().write("<div style=\"text-align:center;\">There appear to be no channels in the app</div>".getBytes());
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					} else {
+						Set<String> userChannels = dbInstance.getChannels(user);
+						int i = 1;
+						for (String n : channels.keySet()) {
+							String newChannel = "<div style=\"text-align: center\">"
+													+ "<div><h4><strong>Channel #" + i +":</strong></h4></div>"
+													+ "<div style=\"margin-top:-5px; margin-bottom:5px\">Name: " + n + "<br>XPaths: " + channels.get(n) + "</div>"
+													+ "<div style=\"display:inline-block; margin-bottom: 10px\">";
+							if (userChannels.contains(n)) {
+														newChannel += "<button class=\"btn btn-danger\" style=\"margin-left: 20px;\">Delete</button>";
+							}
+							newChannel += "<button class=\"btn btn-success\" style=\"margin-left: 20px;\">View</button>"
+										+ "</div>"
+										+ "</div>";
+							try {
+								response.getOutputStream().write(newChannel.getBytes());
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							i++;
+						}
+					}
+					
+					// Adding end of file
+					File index3 = new File("workspace/HW2/WebContent/WEB-INF/user3.html");
+					FileInputStream fileInput3 = new FileInputStream(index3);
+					int content3;
+					try {
+						while ((content3 = fileInput3.read()) != -1) {
+							response.getOutputStream().write(content3);
+						}
+						fileInput3.close(); // Closing the file stream
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				// redirect to home if not
+				} else {
+					try {
+						response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath\");</script>".getBytes());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			} else {
+				try {
+					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 			
 		} else if (reqPath.startsWith("/channels/view/")) {
 			
 		} else if (reqPath.startsWith("/channels/delete/")) {
 			
+		} else if (reqPath.startsWith("/login")) {
+			try {
+				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath\");</script>".getBytes());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		// redirect to root if don't recognize
+		} else if (reqPath.equalsIgnoreCase("/logout")) {
+			Cookie[] cookies = request.getCookies();
+			Cookie sessionID = null;
+			for (Cookie c : cookies) {
+				if (c.getName().equalsIgnoreCase("sessionID"))
+					sessionID = c;
+			}
+			sessionID.setValue(null);
+			response.addCookie(sessionID);
+			Object test = (String) request.getAttribute("sessionID");
+			System.out.println(test);
+			try {
+				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		
+		// redirect to root if don't recognize
+		} else {
+			try {
+				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -189,6 +365,34 @@ public class XPathServlet extends HttpServlet {
 			return req;
 		} else {
 			return "http://www." + req;
+		}
+	}
+	
+	/**
+	 * Compares two strings char by char
+	 * @param s1 - 1st string to compare
+	 * @param s2 - 2nd string to compare
+	 * @return true if equal, false if not
+	 */
+	private static boolean equals(String s1, String s2) {
+		boolean ret = false;
+		int i = 0;
+		char[] s2Arr = s2.toCharArray();
+		if (s2.length() == s1.length()) {
+			for (char c : s1.toCharArray()) {
+				if (c != s2Arr[i]) {
+					return ret;
+				} else {
+					i++;
+				}
+			}
+			if (i == s2Arr.length) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
 		}
 	}
 }

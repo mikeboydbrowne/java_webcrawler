@@ -1,5 +1,6 @@
 package edu.upenn.cis455.storage;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import com.sleepycat.persist.model.Entity;
@@ -9,8 +10,9 @@ import com.sleepycat.persist.model.PrimaryKey;
 public class UserEntity {
 	
 	private String password;
-	private Set<String> XPaths;
-	private Set<String> channels;
+	private Set<String> XPaths = new HashSet<String>();
+	private Set<String> channels = new HashSet<String>();
+	private String currentSession = null;
 	
 	@PrimaryKey
 	private String userName;
@@ -31,6 +33,14 @@ public class UserEntity {
 	 */
 	public void setPassword(String password) {
 		this.password = password;
+	}
+	
+	public void setSession(String sessionID) {
+		this.currentSession = sessionID;
+	}
+	
+	public void addChannel(String channel) {
+		this.channels.add(channel);
 	}
 	
 	/**
@@ -63,5 +73,9 @@ public class UserEntity {
 	 */
 	public Set<String> getChannels() {
 		return channels;
+	}
+	
+	public String getSession() {
+		return currentSession;
 	}
 }

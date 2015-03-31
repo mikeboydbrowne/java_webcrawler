@@ -3,7 +3,11 @@ package edu.upenn.cis455.storage;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import javax.xml.transform.Transformer;
@@ -18,10 +22,13 @@ import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 import org.w3c.tidy.*;
 
+import java.security.SecureRandom;
+
 public class DBWrapper {
 	
 	private DBEnvironment env;
 	private DataIndexer di;
+	private SecureRandom random = new SecureRandom();
 	
 	public DBWrapper(String path) {
 		env = new DBEnvironment(path);
@@ -153,6 +160,15 @@ public class DBWrapper {
 		}
 	}
 	
+	public boolean addChannel(String userName, String channel) {
+		if (containsUser(userName) && channel != null) {
+			di.userData.get(userName).addChannel(channel);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	/**
 	 * Return the channels requested by a particular user
 	 * @param userName - username whose channels to get
@@ -163,6 +179,84 @@ public class DBWrapper {
 			return di.userData.get(userName).getChannels();
 		} else {
 			return null;
+		}
+	}
+	
+	/**
+	 * Return's the user's current sessionID
+	 * @param userName - user whose sessionID to return
+	 * @return
+	 */
+	public String getCurrentSession(String userName) {
+		if (containsUser(userName)) {
+			UserEntity data = di.userData.get(userName);
+			return data.getSession();
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Set's a user's sessionID variable
+	 * @param userName user whose session to set
+	 */
+	public void setCurrentSession(String userName) {
+		if (containsUser(userName)) {
+			String newID = new BigInteger(130, random).toString(32);
+			UserEntity updatedUser = di.userData.get(userName);
+			di.userData.delete(userName);
+			updatedUser.setSession(newID);
+			di.userData.put(updatedUser);
+		}
+	}
+	
+	/**
+	 * Gets the set of currently used sessions
+	 * @return Set<String> of session
+	 */
+	public Set<String> getSessions() {
+		HashSet<String> sessions = new HashSet<String>();
+		for (String u : di.userData.sortedMap().keySet()) {
+			if (di.userData.get(u).getSession() != null) {
+				sessions.add(di.userData.get(u).getSession());
+			}
+		}
+		return sessions;
+	}
+	
+	/**
+	 * Checks validity of a session
+	 * @param sessionID - session to check
+	 * @return true/false depending on validity
+	 */
+	public boolean isValidSession(String sessionID) {
+		return getSessions().contains(sessionID);
+	}
+	
+	/**
+	 * Gets a hashmap of sessionIDs => users
+	 * @return
+	 */
+	public Map<String, String> getSessionsUsers() {
+		Map<String, String> sessions = new HashMap<String,String>();
+		for (String u : di.userData.sortedMap().keySet()) {
+			if (di.userData.get(u).getSession() != null) {
+				sessions.put(di.userData.get(u).getSession(), u);
+			}
+		}
+		return sessions;
+	}
+	
+	/**
+	 * Checking if a user is logged in somewhere
+	 * @param userName - user to check
+	 * @return true/false depending on logged-in status
+	 */
+	public boolean isAuthed(String userName) {
+		if (containsUser(userName)) {
+			return di.userData.get(userName).getSession() != null;
+		} else {
+			return true;
 		}
 	}
 	
@@ -353,6 +447,48 @@ public class DBWrapper {
 			return false;
 		}
 	}
+	
+	/**
+	 * Adds a channel with the given Xpaths
+	 * @param s channel to start
+	 * @return true if successful, false if not
+	 */
+	public boolean addChannel(String s, String n, String url) {
+		if (s != null) {
+			ChannelEntity newChannel = new ChannelEntity();
+			newChannel.setNameChannel(s, n, url);
+			di.channelData.put(newChannel);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Adds a document and its relevant information to the datastore
+	 * @param n - name of channel
+	 * @param url - url of document in question
+	 * @param d - document to add
+	 * @param t - time at which the document was added
+	 * @return
+	 */
+	public boolean addDocumentTime(String n, String url, String d, long t) {
+		if (n != null && d != null && di.channelData.contains(n)) {
+			di.channelData.get(n).addDocTime(url, d, t);
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public HashMap<String, String> getChannels() {
+		HashMap<String,String> channels = new HashMap<String,String>();
+		for (String n : di.channelData.sortedMap().keySet()) {
+			channels.put(di.channelData.get(n).getPath(), n);
+		}
+		return channels;
+	}
+	
 	
 	/**
 	 * Compares two strings character by character
