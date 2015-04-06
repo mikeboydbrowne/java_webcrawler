@@ -162,7 +162,10 @@ public class DBWrapper {
 	
 	public boolean addChannel(String userName, String channel) {
 		if (containsUser(userName) && channel != null) {
-			di.userData.get(userName).addChannel(channel);
+			UserEntity updatedUser = di.userData.get(userName);
+			di.userData.delete(userName);
+			updatedUser.addChannel(channel);
+			di.userData.put(updatedUser);
 			return true;
 		} else {
 			return false;

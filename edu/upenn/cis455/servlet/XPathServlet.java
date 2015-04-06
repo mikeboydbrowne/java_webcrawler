@@ -21,39 +21,31 @@ public class XPathServlet extends HttpServlet {
 		System.out.println(reqPath);
 		// 
 		if (reqPath.equalsIgnoreCase("/")) {
-			try {
-				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			redirectRoot(response);
 		// validating a user
 		} else if (reqPath.equalsIgnoreCase("/login")) {
 			String userName = request.getParameter("username");
 			String password = request.getParameter("pword");
+			
+			// redirect to user and give it session if validated
 			if (dbInstance.passwordAuth(userName, password)) {
 				dbInstance.setCurrentSession(userName);
 				String currentSession = dbInstance.getCurrentSession(userName);
 				Cookie sessionID = new Cookie("sessionID", currentSession);
 				response.addCookie(sessionID);
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				redirectUser(response);
+			
+			// redirect to root if not validated
 			} else {
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				redirectRoot(response);
 			}
+
 		// creating a new user
 		} else if (reqPath.equalsIgnoreCase("/createAccount")) {
 			String userName = request.getParameter("username");
 			String password = request.getParameter("pword");
 			String passwordConf = request.getParameter("pwordConf");
+			
 			// add a new user, if conf + password match
 			if (equals(password, passwordConf) && !dbInstance.containsUser(userName)) {
 				dbInstance.putUser(userName, password);
@@ -61,19 +53,13 @@ public class XPathServlet extends HttpServlet {
 				String currentSession = dbInstance.getCurrentSession(userName);
 				Cookie sessionID = new Cookie("sessionID", currentSession);
 				response.addCookie(sessionID);
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				
+				// redirect to user page
+				redirectUser(response);
+			
 			// redirect if conf + password don't match
 			} else {
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				redirectRoot(response);
 			}
 		
 		// user adds channel
@@ -101,14 +87,12 @@ public class XPathServlet extends HttpServlet {
 				dbInstance.addChannel(sessionsUsers.get(sessionId), name);
 				
 				// refreshing user page
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				redirectUser(response);
 			}
+
+		// directing to root if post to logout
 		} else if (reqPath.equalsIgnoreCase("/logout")) {
-			System.out.println("Get her!");
+			redirectRoot(response);
 		}
 	}
 
@@ -116,6 +100,7 @@ public class XPathServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws FileNotFoundException {
 		String reqPath = request.getPathInfo();
 		System.out.println(reqPath);
+		
 		// root
 		if (reqPath.equalsIgnoreCase("/")) {
 			// checking if session id
@@ -125,65 +110,40 @@ public class XPathServlet extends HttpServlet {
 				if (c.getName().equalsIgnoreCase("sessionID"))
 					sessionId = c.getValue();
 			}
+			
 			// if none or non-valid session id
 			if (!dbInstance.isValidSession(sessionId)) {
 				// Displaying home interface
-				File index = new File("workspace/HW2/WebContent/WEB-INF/index.html");
-				FileInputStream fileInput = new FileInputStream(index);
-				int content;
-				try {
-					while ((content = fileInput.read()) != -1) {
-						response.getOutputStream().write(content);
-					}
-					fileInput.close(); // Closing the file stream
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
+				addFile(response, "workspace/HW2/WebContent/WEB-INF/index.html");
+			
 			// if valid session id, redirect
 			} else {
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				redirectUser(response);
 			}
-		// /createAccount
+		
+		// createAccount
 		} else if (reqPath.startsWith("/createAccount")) {
 			// Displaying createAccount interface
-			File index = new File("workspace/HW2/WebContent/WEB-INF/createAccount.html");
-			FileInputStream fileInput = new FileInputStream(index);
-			int content;
-			try {
-				while ((content = fileInput.read()) != -1) {
-					response.getOutputStream().write(content);
-				}
-				fileInput.close(); // Closing the file stream
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		// /channels
-		} else if (reqPath.startsWith("/channels")) {
-			// Displaying first part of interface
-			File part1 = new File("workspace/HW2/WebContent/WEB-INF/channels1.html");
-			FileInputStream fileInput1 = new FileInputStream(part1);
-			int content1;
-			try {
-				while ((content1 = fileInput1.read()) != -1) {
-					response.getOutputStream().write(content1);
-				}
-				fileInput1.close(); // Closing the file stream
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			addFile(response, "workspace/HW2/WebContent/WEB-INF/createAccount.html");
 			
-			// Adding channel input
+		// channels
+		} else if (reqPath.startsWith("/channels")) {
+			
+			// displaying first part of interface
+			addFile(response, "workspace/HW2/WebContent/WEB-INF/channels1.html");
+
+			// adding channel input
 			HashMap<String,String> channels = dbInstance.getChannels();
+			
+			// no channels
 			if (channels.isEmpty()) {
 				try {
 					response.getOutputStream().write("<div style=\"text-align:center;\">There appear to be no channels in the app</div>".getBytes());
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			
+			// filling in channels
 			} else {
 				int i = 1;
 				for (String n : channels.keySet()) {
@@ -204,18 +164,7 @@ public class XPathServlet extends HttpServlet {
 			}
 			
 			// Displaying second part of interface
-			// System.out.println(reqPath);
-			File part2 = new File("workspace/HW2/WebContent/WEB-INF/channels2.html");
-			FileInputStream fileInput2 = new FileInputStream(part2);
-			int content2;
-			try {
-				while ((content2 = fileInput2.read()) != -1) {
-					response.getOutputStream().write(content2);
-				}
-				fileInput2.close(); // Closing the file stream
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			addFile(response, "workspace/HW2/WebContent/WEB-INF/channels2.html");
 		// /user
 		} else if (reqPath.startsWith("/user")) {
 			// checking if session id
@@ -234,39 +183,21 @@ public class XPathServlet extends HttpServlet {
 					System.out.println(user);
 					UserEntity currentUser = dbInstance.getUser(user);
 					// Displaying home interface
-					File index1 = new File("workspace/HW2/WebContent/WEB-INF/user1.html");
-					FileInputStream fileInput1 = new FileInputStream(index1);
-					int content1;
-					try {
-						while ((content1 = fileInput1.read()) != -1) {
-							response.getOutputStream().write(content1);
-						}
-						fileInput1.close(); // Closing the file stream
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-					
-					// Adding left form
-					File index2 = new File("workspace/HW2/WebContent/WEB-INF/user2.html");
-					FileInputStream fileInput2 = new FileInputStream(index2);
-					int content2;
-					try {
-						while ((content2 = fileInput2.read()) != -1) {
-							response.getOutputStream().write(content2);
-						}
-						fileInput2.close(); // Closing the file stream
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
+					addFile(response, "workspace/HW2/WebContent/WEB-INF/user1.html");
+					addFile(response, "workspace/HW2/WebContent/WEB-INF/user2.html");
 					
 					// Adding channel input
 					HashMap<String,String> channels = dbInstance.getChannels();
+					
+					// no channels
 					if (channels.isEmpty()) {
 						try {
 							response.getOutputStream().write("<div style=\"text-align:center;\">There appear to be no channels in the app</div>".getBytes());
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+					
+					// channels
 					} else {
 						Set<String> userChannels = dbInstance.getChannels(user);
 						int i = 1;
@@ -291,31 +222,13 @@ public class XPathServlet extends HttpServlet {
 					}
 					
 					// Adding end of file
-					File index3 = new File("workspace/HW2/WebContent/WEB-INF/user3.html");
-					FileInputStream fileInput3 = new FileInputStream(index3);
-					int content3;
-					try {
-						while ((content3 = fileInput3.read()) != -1) {
-							response.getOutputStream().write(content3);
-						}
-						fileInput3.close(); // Closing the file stream
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
+					addFile(response, "workspace/HW2/WebContent/WEB-INF/user3.html");
 				// redirect to home if not
 				} else {
-					try {
-						response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath\");</script>".getBytes());
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					redirectRoot(response);
 				}
 			} else {
-				try {
-					response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				redirectRoot(response);
 			}
 			
 		} else if (reqPath.startsWith("/channels/view/")) {
@@ -323,11 +236,8 @@ public class XPathServlet extends HttpServlet {
 		} else if (reqPath.startsWith("/channels/delete/")) {
 			
 		} else if (reqPath.startsWith("/login")) {
-			try {
-				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath\");</script>".getBytes());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			redirectRoot(response);
+
 		// redirect to root if don't recognize
 		} else if (reqPath.equalsIgnoreCase("/logout")) {
 			Cookie[] cookies = request.getCookies();
@@ -340,22 +250,19 @@ public class XPathServlet extends HttpServlet {
 			response.addCookie(sessionID);
 			Object test = (String) request.getAttribute("sessionID");
 			System.out.println(test);
-			try {
-				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			redirectRoot(response);
 		
 		// redirect to root if don't recognize
 		} else {
-			try {
-				response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			redirectRoot(response);
 		}
 	}
 
+	/**
+	 * 
+	 * @param req
+	 * @return
+	 */
 	private String standardizeReq(String req) {
 		if (req.startsWith("http://")) {
 			return req;
@@ -365,6 +272,43 @@ public class XPathServlet extends HttpServlet {
 			return req;
 		} else {
 			return "http://www." + req;
+		}
+	}
+	
+	private void addFile(HttpServletResponse response, String filename) {
+		// Displaying home interface
+		File index = new File(filename);
+		FileInputStream fileInput = null;
+		try {
+			fileInput = new FileInputStream(index);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int content;
+		try {
+			while ((content = fileInput.read()) != -1) {
+				response.getOutputStream().write(content);
+			}
+			fileInput.close(); // Closing the file stream
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	private void redirectUser(HttpServletResponse response) {
+		try {
+			response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/user\");</script>".getBytes());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void redirectRoot(HttpServletResponse response) {
+		try {
+			response.getOutputStream().write("<script>window.location.replace(\"/HW2/xpath/\");</script>".getBytes());
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
